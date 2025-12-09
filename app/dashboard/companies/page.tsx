@@ -151,10 +151,10 @@ export default function CompaniesPage() {
       </div>
 
       <DataTable
+        title="Empresas"
         data={companies}
         columns={columns}
         onEdit={(company) => router.push(`/dashboard/companies/${company.id}`)}
-        searchKeys={['name', 'nif', 'email', 'phone', 'city']}
         emptyMessage="No hay empresas registradas"
       />
     </div>

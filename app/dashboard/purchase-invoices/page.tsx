@@ -198,10 +198,10 @@ export default function PurchaseInvoicesPage() {
       </div>
 
       <DataTable
+        title="Facturas de Compra"
         data={invoices}
         columns={columns}
         onEdit={(invoice) => router.push(`/dashboard/purchase-invoices/${invoice.id}`)}
-        searchKeys={['number', 'supplierReference', 'contact.name']}
         emptyMessage="No hay facturas de compra registradas"
       />
     </div>

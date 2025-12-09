@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { DataTable } from '@/components/DataTable';
 
 interface User {
@@ -293,6 +294,7 @@ export default function AttendancePage() {
       </div>
 
       <DataTable
+        title="Asistencias"
         data={attendances}
         columns={columns}
         onDelete={handleDelete}

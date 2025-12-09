@@ -135,10 +135,10 @@ export default function ProductsPage() {
       </div>
 
       <DataTable
+        title="Productos"
         data={products}
         columns={columns}
         onEdit={(product) => router.push(`/dashboard/products/${product.id}`)}
-        searchKeys={['code', 'name', 'description', 'category']}
         emptyMessage="No hay productos registrados"
       />
     </div>

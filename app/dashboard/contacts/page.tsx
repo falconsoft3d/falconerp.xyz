@@ -139,10 +139,10 @@ export default function ContactsPage() {
       </div>
 
       <DataTable
+        title="Contactos"
         data={contacts}
         columns={columns}
         onEdit={(contact) => router.push(`/dashboard/contacts/${contact.id}`)}
-        searchKeys={['name', 'nif', 'email', 'phone', 'city']}
         emptyMessage="No hay contactos registrados"
       />
     </div>

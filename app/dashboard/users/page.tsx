@@ -120,10 +120,10 @@ export default function UsersPage() {
       </div>
 
       <DataTable
+        title="Usuarios"
         data={users}
         columns={columns}
         onEdit={(user) => router.push(`/dashboard/users/${user.id}`)}
-        searchKeys={['name', 'email']}
         emptyMessage="No hay usuarios registrados"
       />
     </div>

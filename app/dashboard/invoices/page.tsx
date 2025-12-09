@@ -216,10 +216,10 @@ export default function InvoicesPage() {
       </div>
 
       <DataTable
+        title="Facturas de Venta"
         data={invoices}
         columns={columns}
         onEdit={(invoice) => router.push(`/dashboard/invoices/${invoice.id}`)}
-        searchKeys={['number', 'contact.name']}
         emptyMessage="No hay facturas registradas"
       />
     </div>
