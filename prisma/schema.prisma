@@ -1,0 +1,304 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String
+  name      String
+  role      String     @default("user") // "admin" o "user"
+  active    Boolean    @default(true)
+  
+  // Usuario que lo creó (null si es el usuario principal registrado)
+  createdById String?
+  createdBy   User?    @relation("UserCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  
+  // Usuarios que este usuario ha creado
+  createdUsers User[] @relation("UserCreator")
+  
+  // Empresa asignada por defecto
+  defaultCompanyId String?
+  defaultCompany   Company? @relation("DefaultCompany", fields: [defaultCompanyId], references: [id], onDelete: SetNull)
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  companies Company[]
+  contacts  Contact[]
+  products  Product[]
+  invoices  Invoice[]
+  attendances Attendance[]
+}
+
+model Company {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name      String
+  nif       String?    // NIF/CIF de la empresa
+  address   String?
+  city      String?
+  postalCode String?
+  country   String?    // País de la empresa
+  phone     String?
+  email     String?
+  logo      String?    // URL del logo de la empresa
+  
+  // Colores del tema
+  primaryColor   String    @default("#10b981")  // Color principal (verde por defecto)
+  secondaryColor String    @default("#059669")  // Color secundario
+  
+  // Moneda
+  currency       String    @default("EUR")      // Moneda por defecto (EUR, USD, etc.)
+  
+  // Secuencias de facturas
+  salesInvoicePrefix     String    @default("INV")   // Prefijo para facturas de venta
+  salesInvoiceNextNumber Int       @default(1)       // Próximo número de factura de venta
+  purchaseInvoicePrefix  String    @default("INVO")  // Prefijo para facturas de compra
+  purchaseInvoiceNextNumber Int    @default(1)       // Próximo número de factura de compra
+  
+  active    Boolean    @default(false)  // Solo una empresa puede estar activa a la vez
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  contacts  Contact[]
+  products  Product[]
+  invoices  Invoice[]
+  attendances Attendance[]
+  defaultUsers User[] @relation("DefaultCompany")
+  
+  @@index([userId])
+  @@index([userId, active])
+}
+
+model Contact {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Datos del contacto
+  name        String
+  nif         String?   // NIF/CIF del contacto
+  email       String?
+  phone       String?
+  address     String?
+  city        String?
+  postalCode  String?
+  country     String?   @default("España")
+  
+  // Tipo de contacto
+  isCustomer  Boolean   @default(true)  // Es cliente
+  isSupplier  Boolean   @default(true)  // Es proveedor
+  
+  // Estado
+  active      Boolean   @default(true)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  invoices    Invoice[]
+  
+  @@index([userId])
+  @@index([companyId])
+  @@index([email])
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Datos del producto
+  code        String    // Código del producto
+  name        String
+  description String?
+  
+  // Precios
+  price       Float     // Precio unitario sin IVA
+  tax         Float     @default(21) // Porcentaje de IVA
+  
+  // Inventario
+  stock       Int       @default(0)
+  minStock    Int?      // Stock mínimo para alertas
+  
+  // Categorización
+  category    String?
+  unit        String    @default("unidad") // unidad, kg, litro, etc.
+  
+  // Estado
+  active      Boolean   @default(true)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  invoiceItems InvoiceItem[]
+  
+  @@unique([companyId, code])
+  @@index([userId])
+  @@index([companyId])
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  contactId     String
+  contact       Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  
+  // Tipo de factura
+  type          InvoiceType @default(SALE) // Venta o Compra
+  
+  // Número de factura
+  number        String    // Número de factura (ej: INV-2024-001)
+  
+  // Referencia del proveedor (solo para facturas de compra)
+  supplierReference String?
+  
+  // Fechas
+  date          DateTime  @default(now())
+  dueDate       DateTime?
+  
+  // Moneda
+  currency      String    @default("EUR") // Moneda de la factura
+  
+  // Importes
+  subtotal      Float     // Suma de items sin IVA
+  taxAmount     Float     // Total de IVA
+  total         Float     // Total con IVA
+  
+  // Estado de validación
+  status        InvoiceStatus @default(DRAFT)
+  
+  // Estado de pago
+  paymentStatus PaymentStatus @default(UNPAID)
+  
+  // Notas
+  notes         String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  items         InvoiceItem[]
+  attachments   InvoiceAttachment[]
+  comments      InvoiceComment[]
+  
+  @@unique([companyId, number])
+  @@index([userId])
+  @@index([companyId])
+  @@index([contactId])
+}
+
+enum InvoiceType {
+  SALE        // Factura de venta
+  PURCHASE    // Factura de compra
+}
+
+enum InvoiceStatus {
+  DRAFT       // Borrador
+  VALIDATED   // Validada
+}
+
+enum PaymentStatus {
+  UNPAID      // Sin pagar
+  PAID        // Pagada
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  
+  // Datos del item
+  description String
+  quantity    Float
+  price       Float    // Precio unitario sin IVA
+  tax         Float    // Porcentaje de IVA
+  
+  // Calculados
+  subtotal    Float    // quantity * price
+  taxAmount   Float    // subtotal * (tax / 100)
+  total       Float    // subtotal + taxAmount
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([invoiceId])
+  @@index([productId])
+}
+
+model InvoiceAttachment {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  fileName    String   // Nombre original del archivo
+  fileUrl     String   // URL o path del archivo
+  fileSize    Int      // Tamaño en bytes
+  mimeType    String   // Tipo MIME (application/pdf, image/jpeg, etc.)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([invoiceId])
+}
+
+model InvoiceComment {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  userName    String   // Nombre del usuario que creó el comentario
+  
+  comment     String   // Contenido del comentario
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([invoiceId])
+  @@index([createdAt])
+}
+
+model Attendance {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  date        DateTime @default(now())
+  checkIn     DateTime @default(now())
+  checkOut    DateTime?
+  
+  notes       String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([companyId])
+  @@index([date])
+}
