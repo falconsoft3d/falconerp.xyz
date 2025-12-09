@@ -79,6 +79,10 @@ model Company {
   apiEnabled   Boolean  @default(false)  // Si la API está habilitada para esta empresa
   apiKey       String?  @unique          // Clave de API única para autenticación
   
+  // Token para subida pública de facturas de compra
+  uploadToken  String?  @unique          // Token único para subir facturas desde URL pública
+  uploadTokenEnabled Boolean @default(false)  // Si el token de subida está habilitado
+  
   active    Boolean    @default(false)  // Solo una empresa puede estar activa a la vez
   
   createdAt DateTime   @default(now())
