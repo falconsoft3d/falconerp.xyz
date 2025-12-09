@@ -15,8 +15,25 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string; email: string; avatar?: string } | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { primaryColor, secondaryColor, companyLogo, companyName } = useTheme();
+
+  // Obtener información del usuario
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+    fetchUser();
+  }, []);
 
   // Cerrar menú al hacer click fuera
   useEffect(() => {
@@ -235,10 +252,14 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
                 >
                   <div className="text-right">
                     <p className="text-sm text-gray-600">Usuario</p>
-                    <p className="font-semibold text-gray-800">Administrador</p>
+                    <p className="font-semibold text-gray-800">{user?.name || 'Administrador'}</p>
                   </div>
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ backgroundColor: primaryColor }}>
-                    A
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold overflow-hidden" style={{ backgroundColor: user?.avatar ? 'transparent' : primaryColor }}>
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      user?.name?.charAt(0).toUpperCase() || 'A'
+                    )}
                   </div>
                 </button>
 

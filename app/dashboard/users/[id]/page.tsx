@@ -32,6 +32,7 @@ export default function EditUserPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [error, setError] = useState('');
   const [user, setUser] = useState<User | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -39,6 +40,7 @@ export default function EditUserPage() {
     role: 'user',
     active: true,
     defaultCompanyId: '',
+    avatar: '',
   });
 
   useEffect(() => {
@@ -65,7 +67,11 @@ export default function EditUserPage() {
           role: userData.role,
           active: userData.active,
           defaultCompanyId: userData.defaultCompanyId || '',
+          avatar: userData.avatar || '',
         });
+        if (userData.avatar) {
+          setAvatarPreview(userData.avatar);
+        }
       } else {
         setError('Error al cargar el usuario');
       }
@@ -89,6 +95,7 @@ export default function EditUserPage() {
         role: formData.role,
         active: formData.active,
         defaultCompanyId: formData.defaultCompanyId || undefined,
+        avatar: formData.avatar || undefined,
       };
 
       // Solo incluir password si se proporcionó uno nuevo
@@ -214,6 +221,72 @@ export default function EditUserPage() {
           )}
 
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Foto de Perfil
+              </label>
+              <div className="flex items-center space-x-4">
+                <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (!file.type.match('image/(png|jpeg|jpg)')) {
+                          setError('Solo se permiten archivos PNG, JPG o JPEG');
+                          return;
+                        }
+                        if (file.size > 2 * 1024 * 1024) {
+                          setError('El archivo no debe superar 2MB');
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          const base64String = reader.result as string;
+                          setFormData({ ...formData, avatar: base64String });
+                          setAvatarPreview(base64String);
+                          setError('');
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    disabled={isPrincipalUser}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    PNG, JPG o JPEG. Máximo 2MB.
+                  </p>
+                  {avatarPreview && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, avatar: '' });
+                        setAvatarPreview(null);
+                      }}
+                      disabled={isPrincipalUser}
+                      className="mt-2 text-sm text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Eliminar foto
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <Input
               label="Nombre Completo"
               name="name"

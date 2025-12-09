@@ -1,0 +1,107 @@
+
+> falconerp@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.33
+  - Environments: .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/40) ...
+[Invoices by Month] Iniciando petición
+[Invoices by Month] Payload: null
+[Dashboard Stats] Iniciando petición
+[Dashboard Stats] Payload: null
+   Generating static pages (10/40) 
+Error fetching invoices via API: B [Error]: Dynamic server usage: Route /api/public/invoices couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at V (/Users/marlonfalcon/Documents/Projects/falconerp.xyz/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:21778)
+    at Object.get (/Users/marlonfalcon/Documents/Projects/falconerp.xyz/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:29465)
+    at c (/Users/marlonfalcon/Documents/Projects/falconerp.xyz/.next/server/app/api/public/invoices/route.js:1:535)
+    at /Users/marlonfalcon/Documents/Projects/falconerp.xyz/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:6:38417
+    at /Users/marlonfalcon/Documents/Projects/falconerp.xyz/node_modules/next/dist/server/lib/trace/tracer.js:140:36
+    at NoopContextManager.with (/Users/marlonfalcon/Documents/Projects/falconerp.xyz/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:7062)
+    at ContextAPI.with (/Users/marlonfalcon/Documents/Projects/falconerp.xyz/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:518)
+    at NoopTracer.startActiveSpan (/Users/marlonfalcon/Documents/Projects/falconerp.xyz/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18093)
+    at ProxyTracer.startActiveSpan (/Users/marlonfalcon/Documents/Projects/falconerp.xyz/node_modules/next/dist/compiled/@opentelemetry/api/index.js:1:18854)
+    at /Users/marlonfalcon/Documents/Projects/falconerp.xyz/node_modules/next/dist/server/lib/trace/tracer.js:122:103 {
+  description: "Route /api/public/invoices couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+   Generating static pages (20/40) 
+   Generating static pages (30/40) 
+ ✓ Generating static pages (40/40)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                  Size     First Load JS
+┌ ○ /                                        2.5 kB           99 kB
+├ ○ /_not-found                              880 B          88.6 kB
+├ ƒ /api/attendance                          0 B                0 B
+├ ƒ /api/attendance/[id]                     0 B                0 B
+├ ƒ /api/auth/change-password                0 B                0 B
+├ ƒ /api/auth/login                          0 B                0 B
+├ ƒ /api/auth/logout                         0 B                0 B
+├ ƒ /api/auth/me                             0 B                0 B
+├ ƒ /api/auth/register                       0 B                0 B
+├ ƒ /api/companies                           0 B                0 B
+├ ƒ /api/companies/[id]                      0 B                0 B
+├ ƒ /api/companies/[id]/activate             0 B                0 B
+├ ƒ /api/companies/[id]/api-key              0 B                0 B
+├ ƒ /api/companies/[id]/test-email           0 B                0 B
+├ ƒ /api/contacts                            0 B                0 B
+├ ƒ /api/contacts/[id]                       0 B                0 B
+├ ƒ /api/customers                           0 B                0 B
+├ ƒ /api/customers/[id]                      0 B                0 B
+├ ƒ /api/dashboard/invoices-by-month         0 B                0 B
+├ ƒ /api/dashboard/stats                     0 B                0 B
+├ ƒ /api/invoices                            0 B                0 B
+├ ƒ /api/invoices/[id]                       0 B                0 B
+├ ƒ /api/invoices/[id]/attachments           0 B                0 B
+├ ƒ /api/invoices/[id]/comments              0 B                0 B
+├ ƒ /api/invoices/[id]/send-email            0 B                0 B
+├ ƒ /api/products                            0 B                0 B
+├ ƒ /api/products/[id]                       0 B                0 B
+├ ƒ /api/public/invoices                     0 B                0 B
+├ ƒ /api/users                               0 B                0 B
+├ ƒ /api/users/[id]                          0 B                0 B
+├ ○ /dashboard                               108 kB          205 kB
+├ ○ /dashboard/attendance                    2.36 kB         103 kB
+├ ○ /dashboard/companies                     1.04 kB         101 kB
+├ ƒ /dashboard/companies/[id]                8.02 kB         104 kB
+├ ○ /dashboard/companies/new                 4.26 kB          92 kB
+├ ○ /dashboard/contacts                      986 B           101 kB
+├ ƒ /dashboard/contacts/[id]                 3.73 kB         100 kB
+├ ○ /dashboard/contacts/new                  3.3 kB           91 kB
+├ ○ /dashboard/customers                     2.97 kB        90.7 kB
+├ ○ /dashboard/customers/new                 3.08 kB        99.5 kB
+├ ○ /dashboard/invoices                      1.34 kB         102 kB
+├ ƒ /dashboard/invoices/[id]                 9.65 kB        97.3 kB
+├ ƒ /dashboard/invoices/[id]/print           3.29 kB          91 kB
+├ ○ /dashboard/invoices/new                  5.02 kB        92.7 kB
+├ ○ /dashboard/pos                           4.7 kB         92.4 kB
+├ ○ /dashboard/products                      948 B           101 kB
+├ ƒ /dashboard/products/[id]                 3.92 kB         100 kB
+├ ○ /dashboard/products/new                  3.22 kB        99.7 kB
+├ ○ /dashboard/profile                       3.92 kB        91.6 kB
+├ ○ /dashboard/purchase-invoices             1.37 kB         102 kB
+├ ƒ /dashboard/purchase-invoices/[id]        5.36 kB        96.5 kB
+├ ƒ /dashboard/purchase-invoices/[id]/print  1.87 kB          93 kB
+├ ○ /dashboard/purchase-invoices/new         5.09 kB        92.8 kB
+├ ○ /dashboard/users                         991 B           101 kB
+├ ƒ /dashboard/users/[id]                    4.58 kB         101 kB
+├ ○ /dashboard/users/new                     3.22 kB        90.9 kB
+├ ○ /login                                   3.09 kB        99.5 kB
+└ ○ /register                                3.02 kB        99.5 kB
++ First Load JS shared by all                87.7 kB
+  ├ chunks/2117-468533c5b72e1f41.js          31.9 kB
+  ├ chunks/fd9d1056-d4e45ce7518658bc.js      53.6 kB
+  └ other shared chunks (total)              2.17 kB
+
+
+ƒ Middleware                                 32.4 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

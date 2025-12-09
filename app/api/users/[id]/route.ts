@@ -11,6 +11,7 @@ const updateUserSchema = z.object({
   role: z.enum(['admin', 'user']).optional(),
   defaultCompanyId: z.string().nullable().optional(),
   active: z.boolean().optional(),
+  avatar: z.string().optional(),
 });
 
 // GET /api/users/[id] - Obtener usuario por ID

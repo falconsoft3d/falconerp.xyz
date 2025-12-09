@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
         email: true,
         name: true,
         role: true,
+        avatar: true,
         createdAt: true,
       },
     });
@@ -54,7 +55,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email } = body;
+    const { name, email, avatar } = body;
 
     if (!name || !email) {
       return NextResponse.json(
@@ -86,12 +87,14 @@ export async function PUT(request: NextRequest) {
       data: {
         name,
         email,
+        avatar: avatar !== undefined ? avatar : undefined,
       },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
+        avatar: true,
         createdAt: true,
       },
     });

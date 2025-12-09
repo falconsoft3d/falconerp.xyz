@@ -17,6 +17,7 @@ model User {
   name      String
   role      String     @default("user") // "admin" o "user"
   active    Boolean    @default(true)
+  avatar    String?    // URL o base64 de la foto de perfil
   
   // Usuario que lo creó (null si es el usuario principal registrado)
   createdById String?
