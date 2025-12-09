@@ -122,6 +122,7 @@ export default function EditInvoicePage() {
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -766,6 +767,37 @@ export default function EditInvoicePage() {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!invoice?.contact?.email) {
+      alert('Este contacto no tiene un correo electrónico configurado.');
+      return;
+    }
+
+    if (!confirm(`¿Enviar esta factura por correo a ${invoice.contact.email}?`)) {
+      return;
+    }
+
+    try {
+      setSendingEmail(true);
+      const res = await fetch(`/api/invoices/${invoiceId}/send-email`, {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message || 'Factura enviada correctamente por correo');
+      } else {
+        alert(data.error || 'Error al enviar factura por correo');
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      alert('Error al enviar factura por correo');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-6 flex justify-between items-start no-print">
@@ -804,6 +836,18 @@ export default function EditInvoicePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
             </svg>
             Imprimir
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSendEmail}
+            disabled={sendingEmail || !invoice?.contact?.email}
+            className="bg-teal-50 hover:bg-teal-100 text-teal-700 border-teal-200"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            {sendingEmail ? 'Enviando...' : 'Enviar por Correo'}
           </Button>
           <Button
             type="button"

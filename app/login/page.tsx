@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -10,10 +10,25 @@ export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+
+  // Cargar credenciales guardadas al montar el componente
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    const savedPassword = localStorage.getItem('rememberedPassword');
+    
+    if (savedEmail && savedPassword) {
+      setFormData({
+        email: savedEmail,
+        password: savedPassword,
+      });
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +46,15 @@ export default function LoginPage() {
 
       if (!response.ok) {
         throw new Error(data.error || 'Error al iniciar sesión');
+      }
+
+      // Guardar o eliminar credenciales según la opción "Recordarme"
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', formData.email);
+        localStorage.setItem('rememberedPassword', formData.password);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+        localStorage.removeItem('rememberedPassword');
       }
 
       router.push('/dashboard');
@@ -86,6 +110,19 @@ export default function LoginPage() {
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
 
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500 focus:ring-2"
+              />
+              <label htmlFor="rememberMe" className="ml-2 text-sm text-gray-700 cursor-pointer">
+                Recordar usuario y contraseña
+              </label>
+            </div>
+
             <Button
               type="submit"
               variant="primary"
@@ -97,14 +134,16 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              ¿No tienes cuenta?{' '}
-              <Link href="/register" className="text-teal-600 font-semibold hover:text-teal-700">
-                Regístrate aquí
-              </Link>
-            </p>
-          </div>
+          {process.env.NEXT_PUBLIC_ALLOW_REGISTRATION === 'true' && (
+            <div className="mt-6 text-center">
+              <p className="text-gray-600">
+                ¿No tienes cuenta?{' '}
+                <Link href="/register" className="text-teal-600 font-semibold hover:text-teal-700">
+                  Regístrate aquí
+                </Link>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

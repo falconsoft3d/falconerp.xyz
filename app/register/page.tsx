@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -8,6 +8,18 @@ import { Input } from '@/components/ui/Input';
 
 export default function RegisterPage() {
   const router = useRouter();
+
+  // Verificar si el registro está permitido
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_ALLOW_REGISTRATION !== 'true') {
+      router.push('/login');
+    }
+  }, [router]);
+
+  // Si el registro no está permitido, no mostrar nada
+  if (process.env.NEXT_PUBLIC_ALLOW_REGISTRATION !== 'true') {
+    return null;
+  }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({

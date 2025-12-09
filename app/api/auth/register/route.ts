@@ -12,6 +12,14 @@ const registerSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar si el registro está permitido
+    if (process.env.ALLOW_REGISTRATION !== 'true') {
+      return NextResponse.json(
+        { error: 'El registro de nuevos usuarios está deshabilitado' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     
     // Validar datos

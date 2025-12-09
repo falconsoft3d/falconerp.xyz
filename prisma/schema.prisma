@@ -67,6 +67,13 @@ model Company {
   purchaseInvoicePrefix  String    @default("INVO")  // Prefijo para facturas de compra
   purchaseInvoiceNextNumber Int    @default(1)       // Próximo número de factura de compra
   
+  // Configuración SMTP para envío de correos
+  smtpHost     String?  // smtp.gmail.com
+  smtpPort     Int?     // 587
+  smtpUser     String?  // correo@gmail.com
+  smtpPassword String?  // Contraseña de aplicación de Gmail
+  emailTemplate String? @db.Text  // Plantilla HTML personalizada para emails de facturas
+  
   active    Boolean    @default(false)  // Solo una empresa puede estar activa a la vez
   
   createdAt DateTime   @default(now())

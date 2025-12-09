@@ -20,6 +20,11 @@ const updateCompanySchema = z.object({
   salesInvoiceNextNumber: z.number().int().min(1).optional(),
   purchaseInvoicePrefix: z.string().optional().default('INVO'),
   purchaseInvoiceNextNumber: z.number().int().min(1).optional(),
+  smtpHost: z.string().optional().default(''),
+  smtpPort: z.number().int().min(1).max(65535).optional(),
+  smtpUser: z.string().email('Email inválido').optional().or(z.literal('')),
+  smtpPassword: z.string().optional().default(''),
+  emailTemplate: z.string().optional().default(''),
 });
 
 // GET /api/companies/[id] - Obtener empresa por ID

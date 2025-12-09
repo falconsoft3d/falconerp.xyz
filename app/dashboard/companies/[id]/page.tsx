@@ -16,6 +16,8 @@ export default function EditCompanyPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [showSmtpHelp, setShowSmtpHelp] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     nif: '',
@@ -33,6 +35,11 @@ export default function EditCompanyPage() {
     salesInvoiceNextNumber: 1,
     purchaseInvoicePrefix: 'INVO',
     purchaseInvoiceNextNumber: 1,
+    smtpHost: 'smtp.gmail.com',
+    smtpPort: 587,
+    smtpUser: '',
+    smtpPassword: '',
+    emailTemplate: '',
   });
 
   useEffect(() => {
@@ -64,6 +71,11 @@ export default function EditCompanyPage() {
           salesInvoiceNextNumber: data.salesInvoiceNextNumber || 1,
           purchaseInvoicePrefix: data.purchaseInvoicePrefix || 'INVO',
           purchaseInvoiceNextNumber: data.purchaseInvoiceNextNumber || 1,
+          smtpHost: data.smtpHost || 'smtp.gmail.com',
+          smtpPort: data.smtpPort || 587,
+          smtpUser: data.smtpUser || '',
+          smtpPassword: data.smtpPassword || '',
+          emailTemplate: data.emailTemplate || '',
         });
         if (data.logo) {
           setLogoPreview(data.logo);
@@ -173,6 +185,37 @@ export default function EditCompanyPage() {
     } catch (error) {
       console.error('Error deleting company:', error);
       alert('Error al eliminar empresa');
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!formData.smtpHost || !formData.smtpUser || !formData.smtpPassword) {
+      alert('Por favor completa primero la configuración SMTP antes de hacer la prueba.');
+      return;
+    }
+
+    if (!confirm(`¿Enviar un correo de prueba a ${formData.smtpUser}?`)) {
+      return;
+    }
+
+    try {
+      setTestingEmail(true);
+      const res = await fetch(`/api/companies/${companyId}/test-email`, {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(`✅ ${data.message}\n\nRevisa tu bandeja de entrada.`);
+      } else {
+        alert(`❌ Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error testing email:', error);
+      alert('Error al enviar correo de prueba');
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -376,6 +419,147 @@ export default function EditCompanyPage() {
                   helperText="Próximo número de factura de compra a generar"
                 />
               </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Configuración de Email (Gmail SMTP)</h3>
+              <button
+                type="button"
+                onClick={() => setShowSmtpHelp(!showSmtpHelp)}
+                className="text-teal-600 hover:text-teal-700 text-sm font-medium flex items-center"
+              >
+                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {showSmtpHelp ? 'Ocultar' : 'Ver'} Ayuda
+              </button>
+            </div>
+
+            {showSmtpHelp && (
+              <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-3 flex items-center">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Cómo configurar Gmail para enviar correos
+                </h4>
+                <ol className="space-y-3 text-sm text-blue-900">
+                  <li className="flex items-start">
+                    <span className="font-bold mr-2 bg-blue-200 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">1</span>
+                    <div>
+                      <strong>Habilita la verificación en 2 pasos</strong>
+                      <p className="text-blue-800 mt-1">Ve a tu cuenta de Google → Seguridad → Verificación en 2 pasos y actívala</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="font-bold mr-2 bg-blue-200 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">2</span>
+                    <div>
+                      <strong>Genera una contraseña de aplicación</strong>
+                      <p className="text-blue-800 mt-1">Ve a: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">https://myaccount.google.com/apppasswords</a></p>
+                      <p className="text-blue-800 mt-1">Selecciona "Correo" y "Otro dispositivo", ponle un nombre (ej: "ERP") y genera</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="font-bold mr-2 bg-blue-200 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">3</span>
+                    <div>
+                      <strong>Copia la contraseña generada</strong>
+                      <p className="text-blue-800 mt-1">Google te mostrará una contraseña de 16 caracteres. Cópiala y pégala en el campo "Contraseña SMTP" abajo</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="font-bold mr-2 bg-blue-200 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">4</span>
+                    <div>
+                      <strong>Completa el campo Usuario SMTP</strong>
+                      <p className="text-blue-800 mt-1">
+                        Ingresa tu correo completo de Gmail (ejemplo@gmail.com). El nombre del remitente será automáticamente el nombre de tu empresa.
+                      </p>
+                    </div>
+                  </li>
+                </ol>
+                <div className="mt-4 p-3 bg-blue-100 rounded border border-blue-300">
+                  <p className="text-sm text-blue-900"><strong>⚠️ Importante:</strong> Los campos Host (smtp.gmail.com) y Puerto (587) ya están configurados automáticamente.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Host SMTP"
+                name="smtpHost"
+                value={formData.smtpHost}
+                onChange={handleChange}
+                placeholder="smtp.gmail.com"
+                helperText="Servidor SMTP de Gmail"
+              />
+
+              <Input
+                label="Puerto SMTP"
+                name="smtpPort"
+                type="number"
+                value={formData.smtpPort}
+                onChange={(e) => setFormData({ ...formData, smtpPort: parseInt(e.target.value) || 587 })}
+                placeholder="587"
+                helperText="Puerto TLS (587 para Gmail)"
+              />
+
+              <Input
+                label="Usuario SMTP (Gmail)"
+                name="smtpUser"
+                type="email"
+                value={formData.smtpUser}
+                onChange={handleChange}
+                placeholder="tucorreo@gmail.com"
+                helperText="Tu dirección de Gmail completa"
+              />
+
+              <Input
+                label="Contraseña SMTP"
+                name="smtpPassword"
+                type="password"
+                value={formData.smtpPassword}
+                onChange={handleChange}
+                placeholder="Contraseña de aplicación"
+                helperText="Contraseña de 16 caracteres generada en Google"
+              />
+            </div>
+
+            <div className="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <strong>ℹ️ Nota:</strong> El nombre del remitente será automáticamente el nombre de tu empresa y el email será el Usuario SMTP configurado arriba.
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleTestEmail}
+                disabled={testingEmail || !formData.smtpHost || !formData.smtpUser || !formData.smtpPassword}
+                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {testingEmail ? 'Enviando Prueba...' : 'Enviar Email de Prueba'}
+              </Button>
+            </div>
+
+            <div className="mt-6">
+              <label htmlFor="emailTemplate" className="block text-sm font-medium text-gray-700 mb-2">
+                Plantilla de Correo Personalizada (Opcional)
+              </label>
+              <textarea
+                id="emailTemplate"
+                name="emailTemplate"
+                value={formData.emailTemplate}
+                onChange={handleChange}
+                rows={10}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white text-gray-900 font-mono text-sm"
+                placeholder="Deja este campo vacío para usar la plantilla predeterminada. Si deseas personalizarla, puedes usar HTML con variables como: {{invoice.number}}, {{company.name}}, {{contact.name}}, {{invoice.total}}, etc."
+              />
+              <p className="mt-2 text-sm text-gray-500">
+                Si está vacío, se usará una plantilla profesional predeterminada. Puedes personalizar con HTML y usar variables como: <code className="bg-gray-100 px-1 rounded">{'{{company.name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{invoice.number}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{contact.name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{invoice.total}}'}</code>
+              </p>
             </div>
           </div>
 

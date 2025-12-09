@@ -73,11 +73,13 @@ export default function Home() {
                         Iniciar Sesión
                       </button>
                     </Link>
-                    <Link href="/register">
-                      <button className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg shadow-md transition-all">
-                        Registrarse
-                      </button>
-                    </Link>
+                    {process.env.NEXT_PUBLIC_ALLOW_REGISTRATION === 'true' && (
+                      <Link href="/register">
+                        <button className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg shadow-md transition-all">
+                          Registrarse
+                        </button>
+                      </Link>
+                    )}
                   </>
                 )}
               </div>
@@ -107,11 +109,13 @@ export default function Home() {
                 </Link>
               ) : (
                 <>
-                  <Link href="/register">
-                    <button className="px-8 py-4 bg-teal-600 hover:bg-teal-700 text-white text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all">
-                      Comenzar Gratis
-                    </button>
-                  </Link>
+                  {process.env.NEXT_PUBLIC_ALLOW_REGISTRATION === 'true' && (
+                    <Link href="/register">
+                      <button className="px-8 py-4 bg-teal-600 hover:bg-teal-700 text-white text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all">
+                        Comenzar Gratis
+                      </button>
+                    </Link>
+                  )}
                   <Link href="/login">
                     <button className="px-8 py-4 bg-white hover:bg-gray-50 text-gray-800 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all border border-gray-200">
                       Ver Demo
@@ -192,7 +196,7 @@ export default function Home() {
         </div>
 
         {/* CTA Section */}
-        {!loading && !isAuthenticated && (
+        {!loading && !isAuthenticated && process.env.NEXT_PUBLIC_ALLOW_REGISTRATION === 'true' && (
           <div className="mt-24 text-center">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">
               ¿Listo para Simplificar la Gestión de tu Negocio?
@@ -234,7 +238,9 @@ export default function Home() {
                 ) : (
                   <>
                     <li><Link href="/login" className="hover:text-white">Iniciar Sesión</Link></li>
-                    <li><Link href="/register" className="hover:text-white">Registrarse</Link></li>
+                    {process.env.NEXT_PUBLIC_ALLOW_REGISTRATION === 'true' && (
+                      <li><Link href="/register" className="hover:text-white">Registrarse</Link></li>
+                    )}
                   </>
                 )}
               </ul>

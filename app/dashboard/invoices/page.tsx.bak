@@ -2,30 +2,34 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { DataTable } from '@/components/DataTable';
+import { Button } from '@/components/ui/Button';
 
 interface Invoice {
   id: string;
   number: string;
-  type: string;
-  supplierReference: string | null;
   date: string;
   dueDate: string | null;
   currency: string;
+  subtotal: number;
+  taxAmount: number;
   total: number;
-  status: string;
-  paymentStatus: string;
+  status: 'DRAFT' | 'VALIDATED';
+  paymentStatus: 'UNPAID' | 'PAID';
+  notes: string | null;
   contact: {
+    id: string;
     name: string;
     nif: string | null;
   };
 }
 
-export default function PurchaseInvoicesPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
+export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeCompany, setActiveCompany] = useState<any>(null);
+  const router = useRouter();
 
   useEffect(() => {
     fetchActiveCompany();
@@ -52,13 +56,13 @@ export default function PurchaseInvoicesPage() {
 
   const fetchInvoices = async (companyId: string) => {
     try {
-      const res = await fetch(`/api/invoices?companyId=${companyId}&type=PURCHASE`);
+      const res = await fetch(`/api/invoices?companyId=${companyId}`);
       if (res.ok) {
         const data = await res.json();
         setInvoices(data);
       }
     } catch (error) {
-      console.error('Error fetching purchase invoices:', error);
+      console.error('Error fetching invoices:', error);
     } finally {
       setLoading(false);
     }
@@ -79,6 +83,27 @@ export default function PurchaseInvoicesPage() {
     };
     return symbols[currency] || currency;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando facturas...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeCompany) {
+    return (
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <p className="text-yellow-800">
+          No tienes una empresa activa. Por favor, crea o activa una empresa primero.
+        </p>
+      </div>
+    );
+  }
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -112,6 +137,8 @@ export default function PurchaseInvoicesPage() {
     );
   };
 
+
+
   const columns = [
     { 
       key: 'number', 
@@ -120,15 +147,8 @@ export default function PurchaseInvoicesPage() {
       searchable: true
     },
     { 
-      key: 'supplierReference', 
-      label: 'Ref. Proveedor',
-      sortable: true,
-      searchable: true,
-      render: (invoice: Invoice) => invoice.supplierReference || '-'
-    },
-    { 
       key: 'contact', 
-      label: 'Proveedor',
+      label: 'Cliente',
       sortable: true,
       searchable: true,
       render: (invoice: Invoice) => invoice.contact.name
@@ -180,14 +200,27 @@ export default function PurchaseInvoicesPage() {
 
   return (
     <div>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-800">Facturas de Venta</h2>
+          <p className="text-gray-600 mt-1">Gestiona las facturas de tu empresa</p>
+        </div>
+        <Link href="/dashboard/invoices/new">
+          <Button>
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Nueva Factura
+          </Button>
+        </Link>
+      </div>
+
       <DataTable
-        title="Facturas de Compra"
+        title="Facturas de Venta"
         data={invoices}
         columns={columns}
-        createLink="/dashboard/purchase-invoices/new"
-        createLabel="Nueva Factura de Compra"
-        onEdit={(invoice) => router.push(`/dashboard/purchase-invoices/${invoice.id}`)}
-        emptyMessage="No hay facturas de compra registradas"
+        onEdit={(invoice) => router.push(`/dashboard/invoices/${invoice.id}`)}
+        emptyMessage="No hay facturas registradas"
       />
     </div>
   );
