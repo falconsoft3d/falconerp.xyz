@@ -104,7 +104,7 @@ export default function POSPage() {
                   .map((p: Product) => p.category)
                   .filter((c): c is string => !!c && c.trim() !== '')
               )
-            ).sort();
+            ).sort() as string[];
             setCategories(uniqueCategories);
           }
 

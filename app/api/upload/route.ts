@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
-import { verifyAuth } from '@/lib/jwt'
+import { verifyToken } from '@/lib/jwt'
 
 // Tamaños máximos en bytes
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const payload = verifyAuth(token)
+    const payload = await verifyToken(token)
     if (!payload) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
