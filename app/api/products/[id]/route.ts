@@ -9,11 +9,12 @@ const updateProductSchema = z.object({
   code: z.string().optional(),
   name: z.string().min(1, 'El nombre es requerido'),
   description: z.string().optional(),
+  image: z.string().optional().nullable(),
   type: z.enum(['storable', 'service']).optional().default('storable'),
   price: z.number().optional().default(0),
   tax: z.number().min(0).max(100).optional().default(21),
-  stock: z.number().int().min(0).optional().default(0),
-  minStock: z.number().int().min(0).optional(),
+  stock: z.number().int().optional().default(0),
+  minStock: z.number().int().optional(),
   category: z.string().optional(),
   unit: z.string().optional().default('unidad'),
 });
@@ -80,6 +81,7 @@ export async function PUT(
     const effectiveUserId = await getEffectiveUserId(payload.userId);
 
     const body = await request.json();
+    console.log('🔍 Body recibido para actualizar:', body);
     const validatedData = updateProductSchema.parse(body);
 
     // Filtrar campos vacíos y convertirlos a null
@@ -114,6 +116,7 @@ export async function PUT(
     return NextResponse.json({ message: 'Producto actualizado' });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('❌ Error de validación Zod al actualizar:', error.issues);
       return NextResponse.json(
         { error: 'Datos inválidos', details: error.issues },
         { status: 400 }

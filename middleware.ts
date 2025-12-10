@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
     '/',
   ];
 
-  // Rutas API públicas (auth endpoints)
+  // Rutas API públicas (auth endpoints y web-contacts POST)
   const publicApiPaths = [
     '/api/auth/login',
     '/api/auth/register',
@@ -27,6 +27,11 @@ export async function middleware(request: NextRequest) {
     '/api/auth/resend-verification',
     '/api/public/',
   ];
+
+  // Permitir POST público a web-contacts (para formulario de contacto)
+  if (pathname === '/api/web-contacts' && request.method === 'POST') {
+    return NextResponse.next();
+  }
 
   const isPublicApiPath = publicApiPaths.some(path => pathname.startsWith(path));
   

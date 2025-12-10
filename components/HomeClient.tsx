@@ -200,6 +200,20 @@ export default function HomeClient() {
           </div>
         </div>
 
+        {/* Contact Form Section */}
+        <div className="mt-24 bg-gray-50 rounded-2xl p-12">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              ¿Tienes alguna pregunta?
+            </h2>
+            <p className="text-xl text-gray-600">
+              Contáctanos y te responderemos lo antes posible
+            </p>
+          </div>
+          
+          <ContactForm />
+        </div>
+
         {/* CTA Section */}
         {!loading && !isAuthenticated && process.env.NEXT_PUBLIC_ALLOW_REGISTRATION === 'true' && (
           <div className="mt-24 text-center">
@@ -218,5 +232,171 @@ export default function HomeClient() {
         )}
       </div>
     </>
+  );
+}
+
+function ContactForm() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    message: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      // Preparar datos con valores null en lugar de strings vacíos
+      const dataToSend = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || null,
+        company: formData.company || null,
+        message: formData.message,
+      };
+
+      const res = await fetch('/api/web-contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToSend),
+      });
+
+      if (res.ok) {
+        setSuccess(true);
+        setFormData({ name: '', email: '', phone: '', company: '', message: '' });
+        setTimeout(() => setSuccess(false), 5000);
+      } else {
+        const data = await res.json();
+        console.error('Error del servidor:', data);
+        
+        // Formatear errores de validación de forma amigable
+        if (data.details && Array.isArray(data.details)) {
+          const errorMessages = data.details.map((err: any) => err.message).join(', ');
+          setError(errorMessages);
+        } else {
+          setError(data.error || 'Error al enviar el mensaje');
+        }
+      }
+    } catch (err) {
+      console.error('Error al enviar:', err);
+      setError('Error al enviar el mensaje');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-8 text-center max-w-2xl mx-auto">
+        <div className="text-6xl mb-4">✅</div>
+        <h3 className="text-2xl font-bold text-green-800 mb-2">
+          ¡Mensaje enviado!
+        </h3>
+        <p className="text-green-700">
+          Gracias por contactarnos. Hemos enviado un email de confirmación y te responderemos pronto.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-8 space-y-6 max-w-2xl mx-auto">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Nombre *
+          </label>
+          <input
+            type="text"
+            required
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-900"
+            placeholder="Tu nombre"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Email *
+          </label>
+          <input
+            type="email"
+            required
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-900"
+            placeholder="tu@email.com"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Teléfono
+          </label>
+          <input
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-900"
+            placeholder="+34 123 456 789"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Empresa
+          </label>
+          <input
+            type="text"
+            value={formData.company}
+            onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-900"
+            placeholder="Tu empresa"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Mensaje * <span className="text-gray-500 text-xs">(mínimo 10 caracteres)</span>
+        </label>
+        <textarea
+          required
+          minLength={10}
+          value={formData.message}
+          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+          rows={5}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none text-gray-900"
+          placeholder="Cuéntanos en qué podemos ayudarte... (mínimo 10 caracteres)"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          {formData.message.length}/10 caracteres
+        </p>
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-4 rounded-lg shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {loading ? 'Enviando...' : 'Enviar Mensaje'}
+      </button>
+    </form>
   );
 }

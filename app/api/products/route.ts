@@ -10,11 +10,12 @@ const productSchema = z.object({
   code: z.string().optional(),
   name: z.string().min(1, 'El nombre es requerido'),
   description: z.string().optional(),
+  image: z.string().optional().nullable(),
   type: z.enum(['storable', 'service']).optional().default('storable'),
   price: z.number().optional().default(0),
   tax: z.number().min(0).max(100).optional().default(21),
-  stock: z.number().int().min(0).optional().default(0),
-  minStock: z.number().int().min(0).optional(),
+  stock: z.number().int().optional().default(0),
+  minStock: z.number().int().optional(),
   category: z.string().optional(),
   unit: z.string().optional().default('unidad'),
   active: z.boolean().optional().default(true),
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest) {
         code: productCode,
         name: validatedData.name,
         description: validatedData.description || null,
+        image: validatedData.image || null,
         type: validatedData.type || 'storable',
         price: validatedData.price || 0,
         tax: validatedData.tax || 21,
@@ -134,6 +136,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(product, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Error de validación Zod:', error.issues);
       return NextResponse.json(
         { error: 'Datos inválidos', details: error.issues },
         { status: 400 }

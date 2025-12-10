@@ -63,6 +63,15 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
       href: '/dashboard',
     },
     {
+      name: 'CRM',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 7h6m-6 4h6" />
+        </svg>
+      ),
+      href: '/dashboard/crm',
+    },
+    {
       name: 'Productos',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,6 +126,15 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
       href: '/dashboard/purchase-invoices',
     },
     {
+      name: 'Proyectos',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      ),
+      href: '/dashboard/projects',
+    },
+    {
       name: 'Empresas',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,6 +151,15 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
         </svg>
       ),
       href: '/dashboard/users',
+    },
+    {
+      name: 'Contactos Web',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+      href: '/dashboard/web-contacts',
     },
     {
       name: 'Configuración',
@@ -169,7 +196,10 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
       >
         {/* Logo */}
         <div className="p-6 border-b border-white border-opacity-20">
-          <div className="flex items-center justify-center bg-white rounded-lg p-4">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="w-full flex items-center justify-center bg-white rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+          >
             {companyLogo ? (
               <img 
                 src={companyLogo} 
@@ -179,7 +209,7 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
             ) : (
               <span className="font-bold text-xl text-gray-800">{companyName}</span>
             )}
-          </div>
+          </button>
           <div className="hidden">
             {isSidebarOpen ? (
               <div className="flex items-center space-x-3">
@@ -216,7 +246,29 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav 
+          className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-thin scrollbar-track-transparent"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: `${secondaryColor} transparent`
+          }}
+        >
+          <style jsx>{`
+            nav::-webkit-scrollbar {
+              width: 8px;
+            }
+            nav::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            nav::-webkit-scrollbar-thumb {
+              background: ${secondaryColor};
+              border-radius: 4px;
+            }
+            nav::-webkit-scrollbar-thumb:hover {
+              background: ${secondaryColor};
+              opacity: 0.8;
+            }
+          `}</style>
           {menuItems.map((item) => {
             // Solo activo si es exactamente la ruta o si es /dashboard y estamos exactamente en /dashboard
             const isActive = item.href === '/dashboard' 
@@ -241,20 +293,7 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-white border-opacity-20">
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all w-full opacity-80 hover:opacity-100 ${
-              !isSidebarOpen && 'justify-center'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-            {isSidebarOpen && <span>Contraer</span>}
-          </button>
-        </div>
+
       </aside>
 
       {/* Main Content */}

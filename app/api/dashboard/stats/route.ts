@@ -60,18 +60,43 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Contar facturas
-    const invoicesCount = await prisma.invoice.count({
+    // Contar facturas de venta
+    const salesInvoicesCount = await prisma.invoice.count({
+      where: {
+        companyId: activeCompany.id,
+        type: 'SALE',
+      },
+    });
+
+    // Contar facturas de compra
+    const purchaseInvoicesCount = await prisma.invoice.count({
+      where: {
+        companyId: activeCompany.id,
+        type: 'PURCHASE',
+      },
+    });
+
+    // Contar proyectos
+    const projectsCount = await prisma.project.count({
       where: {
         companyId: activeCompany.id,
       },
     });
 
-    // Calcular facturación total (todas las facturas, no solo validadas)
-    const invoices = await prisma.invoice.findMany({
+    // Contar contactos web
+    const webContactsCount = await prisma.webContact.count({
+      where: {
+        status: {
+          in: ['PENDING', 'CONTACTED'],
+        },
+      },
+    });
+
+    // Calcular facturación de ventas
+    const salesInvoices = await prisma.invoice.findMany({
       where: {
         companyId: activeCompany.id,
-        // Removido el filtro de status: 'VALIDATED' para mostrar todas las facturas
+        type: 'SALE',
       },
       select: {
         total: true,
@@ -79,28 +104,55 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Agrupar por moneda y sumar
-    const revenueByurrency: { [key: string]: number } = {};
-    invoices.forEach(invoice => {
-      const currency = invoice.currency || 'EUR';
-      if (!revenueByurrency[currency]) {
-        revenueByurrency[currency] = 0;
-      }
-      revenueByurrency[currency] += invoice.total;
+    // Calcular facturación de compras
+    const purchaseInvoices = await prisma.invoice.findMany({
+      where: {
+        companyId: activeCompany.id,
+        type: 'PURCHASE',
+      },
+      select: {
+        total: true,
+        currency: true,
+      },
     });
 
-    // Usar la moneda principal (la que tiene más ingresos o EUR por defecto)
-    const primaryCurrency = Object.keys(revenueByurrency).sort(
-      (a, b) => revenueByurrency[b] - revenueByurrency[a]
+    // Agrupar ventas por moneda y sumar
+    const salesRevenueByCurrency: { [key: string]: number } = {};
+    salesInvoices.forEach(invoice => {
+      const currency = invoice.currency || 'EUR';
+      if (!salesRevenueByCurrency[currency]) {
+        salesRevenueByCurrency[currency] = 0;
+      }
+      salesRevenueByCurrency[currency] += invoice.total;
+    });
+
+    // Agrupar compras por moneda y sumar
+    const purchaseRevenueByCurrency: { [key: string]: number } = {};
+    purchaseInvoices.forEach(invoice => {
+      const currency = invoice.currency || 'EUR';
+      if (!purchaseRevenueByCurrency[currency]) {
+        purchaseRevenueByCurrency[currency] = 0;
+      }
+      purchaseRevenueByCurrency[currency] += invoice.total;
+    });
+
+    // Usar la moneda principal (la que tiene más ingresos en ventas o EUR por defecto)
+    const primaryCurrency = Object.keys(salesRevenueByCurrency).sort(
+      (a, b) => salesRevenueByCurrency[b] - salesRevenueByCurrency[a]
     )[0] || 'EUR';
 
-    const totalRevenue = revenueByurrency[primaryCurrency] || 0;
+    const totalSalesRevenue = salesRevenueByCurrency[primaryCurrency] || 0;
+    const totalPurchaseRevenue = purchaseRevenueByCurrency[primaryCurrency] || 0;
 
     return NextResponse.json({
       productsCount,
       contactsCount,
-      invoicesCount,
-      totalRevenue,
+      salesInvoicesCount,
+      purchaseInvoicesCount,
+      projectsCount,
+      webContactsCount,
+      totalSalesRevenue,
+      totalPurchaseRevenue,
       currency: primaryCurrency,
     });
   } catch (error) {

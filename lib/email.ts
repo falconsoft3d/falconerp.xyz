@@ -92,6 +92,50 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
   }
 }
 
+// Función simplificada para formulario de contacto (usa configuración del .env)
+export async function sendContactEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPassword = process.env.SMTP_PASSWORD;
+  const smtpFrom = process.env.SMTP_FROM || 'noreply@falconerp.xyz';
+
+  if (!smtpHost || !smtpUser || !smtpPassword) {
+    console.log('⚠️  Configuración SMTP no completa en .env');
+    console.log('📧 Email que se enviaría a:', to);
+    console.log('📝 Asunto:', subject);
+    console.log('💡 Configura SMTP_HOST, SMTP_USER y SMTP_PASSWORD en .env para enviar emails');
+    return; // No fallar si no hay configuración
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: false,
+      auth: {
+        user: smtpUser,
+        pass: smtpPassword,
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+
+    await transporter.sendMail({
+      from: `"FalconERP" <${smtpFrom}>`,
+      to,
+      subject,
+      html,
+    });
+
+    console.log('✅ Email de contacto enviado a:', to);
+  } catch (error) {
+    console.error('❌ Error al enviar email de contacto:', error);
+    // No lanzar error, solo loguear
+  }
+}
+
 export async function sendEmail({ to, subject, html, companyId, attachments }: EmailOptions) {
   try {
     // Obtener configuración SMTP de la empresa

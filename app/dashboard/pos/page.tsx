@@ -11,6 +11,7 @@ interface Product {
   id: string;
   code: string;
   name: string;
+  image?: string;
   price: number;
   tax: number;
   stock: number;
@@ -44,6 +45,8 @@ export default function POSPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [companyId, setCompanyId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [categories, setCategories] = useState<string[]>([]);
   const [selectedContact, setSelectedContact] = useState<string>('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [quantityInput, setQuantityInput] = useState('1');
@@ -53,17 +56,24 @@ export default function POSPage() {
   }, []);
 
   useEffect(() => {
+    let filtered = products;
+
+    // Filtrar por categoría
+    if (selectedCategory) {
+      filtered = filtered.filter(p => p.category === selectedCategory);
+    }
+
+    // Filtrar por búsqueda
     if (searchTerm) {
-      const filtered = products.filter(p => 
+      filtered = filtered.filter(p => 
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.category && p.category.toLowerCase().includes(searchTerm.toLowerCase()))
       );
-      setFilteredProducts(filtered);
-    } else {
-      setFilteredProducts(products);
     }
-  }, [searchTerm, products]);
+
+    setFilteredProducts(filtered);
+  }, [searchTerm, selectedCategory, products]);
 
   useEffect(() => {
     console.log('Carrito actualizado:', cart);
@@ -86,6 +96,16 @@ export default function POSPage() {
             const productsData = await productsRes.json();
             setProducts(productsData);
             setFilteredProducts(productsData);
+            
+            // Extraer categorías únicas
+            const uniqueCategories = Array.from(
+              new Set(
+                productsData
+                  .map((p: Product) => p.category)
+                  .filter((c): c is string => !!c && c.trim() !== '')
+              )
+            ).sort();
+            setCategories(uniqueCategories);
           }
 
           // Obtener clientes
@@ -323,8 +343,8 @@ export default function POSPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* Área de productos - 60% */}
         <div className="w-[60%] flex flex-col border-r border-gray-200 bg-white">
-          {/* Búsqueda */}
-          <div className="p-4 border-b border-gray-200">
+          {/* Búsqueda y Filtros */}
+          <div className="p-4 border-b border-gray-200 space-y-3">
             <Input
               type="text"
               placeholder="Buscar producto por nombre, código o categoría..."
@@ -332,6 +352,35 @@ export default function POSPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="text-lg"
             />
+            
+            {/* Filtro de categorías */}
+            {categories.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setSelectedCategory('')}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    selectedCategory === ''
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Todas
+                </button>
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                      selectedCategory === category
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Grid de productos */}
@@ -345,6 +394,23 @@ export default function POSPage() {
                   className="p-4 rounded-lg border-2 transition-all hover:shadow-lg cursor-pointer bg-white border-gray-200 hover:border-emerald-500"
                 >
                   <div className="text-left">
+                    {/* Imagen del producto */}
+                    {product.image ? (
+                      <div className="mb-3 rounded-md overflow-hidden bg-gray-50">
+                        <img 
+                          src={product.image} 
+                          alt={product.name}
+                          className="w-full h-32 object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="mb-3 rounded-md bg-gray-100 flex items-center justify-center h-32">
+                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                      </div>
+                    )}
+                    
                     <div className="text-xs text-gray-500 mb-1">{product.code}</div>
                     <h3 className="font-semibold text-gray-800 mb-1 line-clamp-2">
                       {product.name}

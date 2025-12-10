@@ -56,29 +56,37 @@ export async function GET(request: NextRequest) {
         date: true,
         total: true,
         currency: true,
+        type: true,
       },
     });
 
-    // Agrupar por mes
-    const monthlyData: { [key: string]: number } = {};
+    // Agrupar por mes y tipo
+    const salesData: { [key: string]: number } = {};
+    const purchasesData: { [key: string]: number } = {};
     const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     
     // Inicializar todos los meses en 0
-    months.forEach((month, index) => {
-      monthlyData[month] = 0;
+    months.forEach((month) => {
+      salesData[month] = 0;
+      purchasesData[month] = 0;
     });
 
-    // Sumar totales por mes
+    // Sumar totales por mes y tipo
     invoices.forEach(invoice => {
       const month = new Date(invoice.date).getMonth();
       const monthName = months[month];
-      monthlyData[monthName] += invoice.total;
+      if (invoice.type === 'SALE') {
+        salesData[monthName] += invoice.total;
+      } else if (invoice.type === 'PURCHASE') {
+        purchasesData[monthName] += invoice.total;
+      }
     });
 
     // Convertir a array para el gráfico
     const chartData = months.map(month => ({
       month,
-      total: monthlyData[month],
+      ventas: salesData[month],
+      compras: purchasesData[month],
     }));
 
     return NextResponse.json(chartData);

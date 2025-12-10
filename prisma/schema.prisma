@@ -41,6 +41,8 @@ model User {
   products  Product[]
   invoices  Invoice[]
   attendances Attendance[]
+  projects  Project[]
+  tasks     Task[]
 }
 
 model Company {
@@ -105,7 +107,10 @@ model Company {
   products  Product[]
   invoices  Invoice[]
   attendances Attendance[]
+  projects  Project[]
   defaultUsers User[] @relation("DefaultCompany")
+  crmPipelines CrmPipeline[]
+  crmOpportunities CrmOpportunity[]
   
   @@index([userId])
   @@index([userId, active])
@@ -140,6 +145,7 @@ model Contact {
   updatedAt   DateTime  @updatedAt
   
   invoices    Invoice[]
+  crmOpportunities CrmOpportunity[]
   
   @@index([userId])
   @@index([companyId])
@@ -158,6 +164,7 @@ model Product {
   code        String    // Código del producto
   name        String
   description String?
+  image       String?   // URL de la imagen del producto
   type        String    @default("storable") // "storable" (almacenable) o "service" (servicio)
   
   // Precios
@@ -346,4 +353,222 @@ model Backup {
   createdAt   DateTime @default(now())
   
   @@index([createdAt])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?  @db.Text
+  status      ProjectStatus @default(ACTIVE)
+  
+  startDate   DateTime?
+  endDate     DateTime?
+  
+  color       String?  @default("#10b981") // Color para identificación visual
+  
+  active      Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tasks       Task[]
+  
+  @@index([userId])
+  @@index([companyId])
+  @@index([status])
+}
+
+enum ProjectStatus {
+  ACTIVE      // Activo
+  COMPLETED   // Completado
+  ARCHIVED    // Archivado
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  title       String
+  description String?  @db.Text
+  completed   Boolean  @default(false)
+  
+  priority    TaskPriority @default(MEDIUM)
+  
+  dueDate     DateTime?
+  completedAt DateTime?
+  
+  order       Int      @default(0) // Para ordenar tareas
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([projectId])
+  @@index([completed])
+}
+
+enum TaskPriority {
+  LOW         // Baja
+  MEDIUM      // Media
+  HIGH        // Alta
+  URGENT      // Urgente
+}
+
+model WebContact {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String?
+  company     String?
+  message     String   @db.Text
+  status      WebContactStatus @default(PENDING)
+  notes       String?  @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum WebContactStatus {
+  PENDING     // Pendiente
+  CONTACTED   // Contactado
+  CLOSED      // Cerrado
+}
+
+// Modelos CRM
+model CrmPipeline {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  name        String   // Nombre del pipeline (ej: "Ventas", "Proyectos")
+  description String?  @db.Text
+  isDefault   Boolean  @default(false)
+  order       Int      @default(0)
+  
+  publicFormToken String? @unique // Token único para formulario público de oportunidades
+  publicFormEnabled Boolean @default(false) // Si el formulario público está habilitado
+  
+  stages      CrmStage[]
+  opportunities CrmOpportunity[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([companyId])
+}
+
+model CrmStage {
+  id          String   @id @default(cuid())
+  pipelineId  String
+  pipeline    CrmPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  
+  name        String   // Nombre de la etapa (ej: "Prospecto", "Negociación", "Cerrado")
+  color       String   @default("#3b82f6") // Color de la etapa
+  order       Int      @default(0) // Orden de la etapa en el pipeline
+  
+  opportunities CrmOpportunity[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([pipelineId])
+}
+
+model CrmOpportunity {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  pipelineId  String
+  pipeline    CrmPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  
+  stageId     String
+  stage       CrmStage @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  
+  title       String   // Título de la oportunidad
+  description String?  @db.Text
+  value       Float    @default(0) // Valor estimado de la oportunidad
+  currency    String   @default("EUR")
+  probability Int      @default(50) // Probabilidad de cierre (0-100)
+  
+  expectedCloseDate DateTime?
+  closedDate        DateTime?
+  
+  priority    OpportunityPriority @default(MEDIUM)
+  status      OpportunityStatus   @default(OPEN)
+  
+  tags        String[] // Tags para categorizar (ej: ["urgente", "grande"])
+  
+  scheduledDate DateTime? // Fecha programada para seguimiento en calendario
+  
+  order       Int      @default(0) // Orden dentro de la etapa
+  
+  notes       String?  @db.Text
+  
+  activities  CrmActivity[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([companyId])
+  @@index([pipelineId])
+  @@index([stageId])
+  @@index([contactId])
+  @@index([status])
+}
+
+enum OpportunityPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum OpportunityStatus {
+  OPEN        // Abierta
+  WON         // Ganada
+  LOST        // Perdida
+}
+
+model CrmActivity {
+  id            String   @id @default(cuid())
+  opportunityId String
+  opportunity   CrmOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  
+  type          ActivityType
+  title         String
+  description   String?  @db.Text
+  dueDate       DateTime?
+  completed     Boolean  @default(false)
+  completedAt   DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([opportunityId])
+  @@index([completed])
+}
+
+enum ActivityType {
+  CALL        // Llamada
+  EMAIL       // Email
+  MEETING     // Reunión
+  TASK        // Tarea
+  NOTE        // Nota
 }

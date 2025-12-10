@@ -9,14 +9,19 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 interface DashboardStats {
   productsCount: number;
   contactsCount: number;
-  invoicesCount: number;
-  totalRevenue: number;
+  salesInvoicesCount: number;
+  purchaseInvoicesCount: number;
+  projectsCount: number;
+  webContactsCount: number;
+  totalSalesRevenue: number;
+  totalPurchaseRevenue: number;
   currency: string;
 }
 
 interface MonthlyInvoice {
   month: string;
-  total: number;
+  ventas: number;
+  compras: number;
 }
 
 export default function DashboardPage() {
@@ -24,8 +29,12 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     productsCount: 0,
     contactsCount: 0,
-    invoicesCount: 0,
-    totalRevenue: 0,
+    salesInvoicesCount: 0,
+    purchaseInvoicesCount: 0,
+    projectsCount: 0,
+    webContactsCount: 0,
+    totalSalesRevenue: 0,
+    totalPurchaseRevenue: 0,
     currency: 'EUR',
   });
   const [loading, setLoading] = useState(true);
@@ -103,8 +112,8 @@ export default function DashboardPage() {
       link: '/dashboard/contacts',
     },
     {
-      title: 'Facturas',
-      value: loading ? '...' : stats.invoicesCount.toString(),
+      title: 'Fact. Ventas',
+      value: loading ? '...' : stats.salesInvoicesCount.toString(),
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -114,15 +123,59 @@ export default function DashboardPage() {
       link: '/dashboard/invoices',
     },
     {
-      title: 'Facturación Total',
-      value: loading ? '...' : `${getCurrencySymbol(stats.currency)}${stats.totalRevenue.toFixed(2)}`,
+      title: 'Fact. Compras',
+      value: loading ? '...' : stats.purchaseInvoicesCount.toString(),
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+        </svg>
+      ),
+      color: 'orange',
+      link: '/dashboard/purchase-invoices',
+    },
+    {
+      title: 'Proyectos',
+      value: loading ? '...' : stats.projectsCount.toString(),
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      ),
+      color: 'indigo',
+      link: '/dashboard/projects',
+    },
+    {
+      title: 'Contactos Web',
+      value: loading ? '...' : stats.webContactsCount.toString(),
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+      color: 'pink',
+      link: '/dashboard/web-contacts',
+    },
+    {
+      title: 'Ventas',
+      value: loading ? '...' : `${getCurrencySymbol(stats.currency)}${stats.totalSalesRevenue.toFixed(2)}`,
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
         </svg>
       ),
       color: 'theme',
       link: '/dashboard/invoices',
+    },
+    {
+      title: 'Compras',
+      value: loading ? '...' : `${getCurrencySymbol(stats.currency)}${stats.totalPurchaseRevenue.toFixed(2)}`,
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+        </svg>
+      ),
+      color: 'red',
+      link: '/dashboard/purchase-invoices',
     },
   ];
   
@@ -131,6 +184,10 @@ export default function DashboardPage() {
       'blue': '#3b82f6',
       'green': '#10b981',
       'purple': '#a855f7',
+      'orange': '#f97316',
+      'indigo': '#6366f1',
+      'pink': '#ec4899',
+      'red': '#ef4444',
       'theme': primaryColor,
     };
     return colors[color] || primaryColor;
@@ -175,17 +232,17 @@ export default function DashboardPage() {
     
 
       {/* Estadísticas KPI */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpiCards.map((kpi, index) => (
           <Link key={index} href={kpi.link}>
             <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-medium">{kpi.title}</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">{kpi.value}</p>
+                  <p className="text-gray-600 text-xs font-medium">{kpi.title}</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">{kpi.value}</p>
                 </div>
                 <div 
-                  className="p-3 rounded-xl text-white"
+                  className="p-2 rounded-lg text-white"
                   style={{ backgroundColor: getStatColor(kpi.color) }}
                 >
                   {kpi.icon}
@@ -200,8 +257,8 @@ export default function DashboardPage() {
       <Card>
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h3 className="text-xl font-bold text-gray-800">Facturas de Venta por Mes</h3>
-            <p className="text-gray-600 text-sm mt-1">Evolución de facturación en {selectedYear}</p>
+            <h3 className="text-xl font-bold text-gray-800">Facturas por Mes</h3>
+            <p className="text-gray-600 text-sm mt-1">Evolución de ventas y compras en {selectedYear}</p>
           </div>
           <select
             value={selectedYear}
@@ -234,15 +291,28 @@ export default function DashboardPage() {
                   borderRadius: '8px',
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                 }}
-                formatter={(value: number) => [`${getCurrencySymbol(stats.currency)}${value.toFixed(2)}`, 'Total']}
+                formatter={(value: number, name: string) => [
+                  `${getCurrencySymbol(stats.currency)}${value.toFixed(2)}`, 
+                  name === 'ventas' ? 'Ventas' : 'Compras'
+                ]}
               />
               <Line 
                 type="monotone" 
-                dataKey="total" 
-                stroke={primaryColor}
+                dataKey="ventas" 
+                stroke="#3b82f6"
                 strokeWidth={3}
-                dot={{ fill: primaryColor, strokeWidth: 2, r: 4 }}
+                dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
                 activeDot={{ r: 6 }}
+                name="Ventas"
+              />
+              <Line 
+                type="monotone" 
+                dataKey="compras" 
+                stroke="#ef4444"
+                strokeWidth={3}
+                dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6 }}
+                name="Compras"
               />
             </LineChart>
           </ResponsiveContainer>

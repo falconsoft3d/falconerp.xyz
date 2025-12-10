@@ -6,6 +6,7 @@ interface CardProps {
   title?: string;
   subtitle?: string;
   footer?: React.ReactNode;
+  onClick?: () => void;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -14,9 +15,13 @@ export const Card: React.FC<CardProps> = ({
   title,
   subtitle,
   footer,
+  onClick,
 }) => {
   return (
-    <div className={`bg-white rounded-xl shadow-md overflow-hidden ${className}`}>
+    <div 
+      className={`bg-white rounded-xl shadow-md overflow-hidden ${className} ${onClick ? 'cursor-pointer' : ''}`}
+      onClick={onClick}
+    >
       {(title || subtitle) && (
         <div className="px-6 py-4 border-b border-gray-200">
           {title && (

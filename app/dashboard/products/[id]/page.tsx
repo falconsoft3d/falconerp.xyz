@@ -14,11 +14,14 @@ export default function EditProductPage() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     code: '',
     name: '',
     description: '',
+    image: '',
     type: 'storable',
     price: '',
     tax: '21',
@@ -60,6 +63,7 @@ export default function EditProductPage() {
           code: data.code || '',
           name: data.name || '',
           description: data.description || '',
+          image: data.image || '',
           type: data.type || 'storable',
           price: data.price?.toString() || '0',
           tax: data.tax?.toString() || '21',
@@ -68,6 +72,9 @@ export default function EditProductPage() {
           category: data.category || '',
           unit: data.unit || 'unidad',
         });
+        if (data.image) {
+          setImagePreview(data.image);
+        }
       } else {
         setError('Error al cargar producto');
       }
@@ -77,6 +84,57 @@ export default function EditProductPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('La imagen es demasiado grande. Máximo 5MB');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setError('Solo se permiten archivos de imagen');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      const token = localStorage.getItem('token');
+      
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formDataUpload,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setFormData({ ...formData, image: data.url });
+        setImagePreview(data.url);
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Error al subir la imagen');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setError('Error al subir la imagen');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFormData({ ...formData, image: '' });
+    setImagePreview(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,6 +148,7 @@ export default function EditProductPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          image: formData.image || null,
           price: parseFloat(formData.price) || 0,
           tax: parseFloat(formData.tax) || 21,
           stock: parseInt(formData.stock) || 0,
@@ -218,6 +277,51 @@ export default function EditProductPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white text-gray-900"
                 placeholder="Descripción del producto"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Imagen del Producto</label>
+              {!imagePreview ? (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-500 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={uploading}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label 
+                    htmlFor="image-upload" 
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-sm text-gray-600">
+                      {uploading ? 'Subiendo imagen...' : 'Haz clic para subir una imagen'}
+                    </span>
+                    <span className="text-xs text-gray-500 mt-1">PNG, JPG, GIF hasta 5MB</span>
+                  </label>
+                </div>
+              ) : (
+                <div className="relative border border-gray-300 rounded-lg p-4">
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    className="w-full h-48 object-contain rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
