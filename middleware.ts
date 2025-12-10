@@ -17,6 +17,24 @@ export async function middleware(request: NextRequest) {
     '/',
   ];
 
+  // Rutas API públicas (auth endpoints)
+  const publicApiPaths = [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/api/auth/verify-email',
+    '/api/auth/resend-verification',
+    '/api/public/',
+  ];
+
+  const isPublicApiPath = publicApiPaths.some(path => pathname.startsWith(path));
+  
+  // Si es una API pública, permitir acceso sin verificación
+  if (isPublicApiPath) {
+    return NextResponse.next();
+  }
+
   const isPublicPath = publicPaths.some(path => {
     if (path === '/') {
       return pathname === '/';
