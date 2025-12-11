@@ -20,6 +20,18 @@ interface Company {
   currency: string;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  code: string;
+  price: number;
+}
+
+interface Invoice {
+  id: string;
+  number: string;
+}
+
 interface Tracking {
   id: string;
   trackingNumber: string;
@@ -37,7 +49,9 @@ interface Tracking {
   inTransitDate?: Date | null;
   deliveredDate?: Date | null;
   contact?: Contact | null;
+  product?: Product | null;
   company: Company;
+  invoice?: Invoice | null;
   createdAt: Date;
 }
 
@@ -56,9 +70,13 @@ export default function TrackingDetailPage() {
   const [tracking, setTracking] = useState<Tracking | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     trackingNumber: '',
     description: '',
+    contactId: '',
+    productId: '',
     origin: '',
     destination: '',
     carrier: '',
@@ -80,12 +98,20 @@ export default function TrackingDetailPage() {
         setFormData({
           trackingNumber: data.trackingNumber,
           description: data.description,
+          contactId: data.contact?.id || '',
+          productId: data.product?.id || '',
           origin: data.origin || '',
           destination: data.destination || '',
           carrier: data.carrier || '',
           weight: data.weight?.toString() || '',
           notes: data.notes || '',
         });
+        
+        // Cargar contactos y productos si hay empresa
+        if (data.company?.id) {
+          fetchContacts(data.company.id);
+          fetchProducts(data.company.id);
+        }
       } else {
         alert('Error al cargar seguimiento');
         router.push('/dashboard/tracking');
@@ -94,6 +120,30 @@ export default function TrackingDetailPage() {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchContacts = async (companyId: string) => {
+    try {
+      const response = await fetch(`/api/contacts?companyId=${companyId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setContacts(data);
+      }
+    } catch (error) {
+      console.error('Error al cargar contactos:', error);
+    }
+  };
+
+  const fetchProducts = async (companyId: string) => {
+    try {
+      const response = await fetch(`/api/products?companyId=${companyId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setProducts(data);
+      }
+    } catch (error) {
+      console.error('Error al cargar productos:', error);
     }
   };
 
@@ -126,6 +176,8 @@ export default function TrackingDetailPage() {
     try {
       const payload = {
         ...formData,
+        contactId: formData.contactId || null,
+        productId: formData.productId || null,
         origin: formData.origin || null,
         destination: formData.destination || null,
         carrier: formData.carrier || null,
@@ -190,12 +242,53 @@ export default function TrackingDetailPage() {
           Volver a Seguimientos
         </Link>
 
-        <button
-          onClick={() => setIsEditMode(!isEditMode)}
-          className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-900"
-        >
-          {isEditMode ? 'Cancelar Edición' : 'Editar'}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setIsEditMode(!isEditMode)}
+            className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-900"
+          >
+            {isEditMode ? 'Cancelar Edición' : 'Editar'}
+          </button>
+          
+          {tracking.invoice ? (
+            <Link
+              href={`/dashboard/invoices/${tracking.invoice.id}`}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md inline-flex items-center"
+            >
+              <svg className="mr-2 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Ver Factura {tracking.invoice.number}
+            </Link>
+          ) : (
+            <button
+              onClick={async () => {
+                if (!confirm('¿Crear factura para este seguimiento? Se calculará: Precio del producto × Peso')) return;
+                
+                try {
+                  const response = await fetch(`/api/tracking/${params.id}/create-invoice`, {
+                    method: 'POST',
+                  });
+                  
+                  const data = await response.json();
+                  
+                  if (response.ok) {
+                    alert(data.message);
+                    router.push(`/dashboard/invoices/${data.invoice.id}`);
+                  } else {
+                    alert(data.error || 'Error al crear factura');
+                  }
+                } catch (error) {
+                  console.error('Error:', error);
+                  alert('Error al crear factura');
+                }
+              }}
+              className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
+            >
+              💰 Crear Factura
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white shadow-md rounded-lg p-6 mb-6">
@@ -208,6 +301,26 @@ export default function TrackingDetailPage() {
               Creado el {new Date(tracking.createdAt).toLocaleDateString('es-ES')}
             </p>
           </div>
+          <div className="text-right">
+            <div className="text-3xl font-bold text-indigo-600">
+              {(() => {
+                const startDate = tracking.requestedDate ? new Date(tracking.requestedDate) : new Date(tracking.createdAt);
+                const endDate = tracking.deliveredDate ? new Date(tracking.deliveredDate) : new Date();
+                const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays;
+              })()}
+            </div>
+            <div className="text-sm text-black font-medium">
+              {(() => {
+                const startDate = tracking.requestedDate ? new Date(tracking.requestedDate) : new Date(tracking.createdAt);
+                const endDate = tracking.deliveredDate ? new Date(tracking.deliveredDate) : new Date();
+                const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays === 1 ? 'día' : 'días';
+              })()} {tracking.deliveredDate ? 'totales' : 'transcurridos'}
+            </div>
+          </div>
         </div>
 
         {/* Información Principal */}
@@ -215,73 +328,103 @@ export default function TrackingDetailPage() {
           {isEditMode ? (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nº Seguimiento</label>
+                <label className="block text-sm font-medium text-black mb-1">Nº Seguimiento</label>
                 <input
                   type="text"
                   value={formData.trackingNumber}
                   onChange={(e) => setFormData({ ...formData, trackingNumber: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Transportista</label>
+                <label className="block text-sm font-medium text-black mb-1">Contacto</label>
+                <select
+                  value={formData.contactId}
+                  onChange={(e) => setFormData({ ...formData, contactId: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
+                >
+                  <option value="">Sin contacto</option>
+                  {contacts.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-black mb-1">Producto</label>
+                <select
+                  value={formData.productId}
+                  onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
+                >
+                  <option value="">Sin producto</option>
+                  {products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name} ({product.code}) - ${product.price}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-black mb-1">Transportista</label>
                 <input
                   type="text"
                   value={formData.carrier}
                   onChange={(e) => setFormData({ ...formData, carrier: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                <label className="block text-sm font-medium text-black mb-1">Descripción</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Origen</label>
+                <label className="block text-sm font-medium text-black mb-1">Origen</label>
                 <input
                   type="text"
                   value={formData.origin}
                   onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Destino</label>
+                <label className="block text-sm font-medium text-black mb-1">Destino</label>
                 <input
                   type="text"
                   value={formData.destination}
                   onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Peso (kg)</label>
+                <label className="block text-sm font-medium text-black mb-1">Peso (kg)</label>
                 <input
                   type="number"
                   value={formData.weight}
                   onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
                   step="0.01"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                <label className="block text-sm font-medium text-black mb-1">Notas</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={4}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-black"
                 />
               </div>
               <div className="md:col-span-2 flex justify-end space-x-3">
                 <button
                   onClick={() => setIsEditMode(false)}
-                  className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-black bg-white hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
@@ -296,35 +439,35 @@ export default function TrackingDetailPage() {
           ) : (
             <>
               <div>
-                <p className="text-sm text-gray-500">Descripción</p>
-                <p className="mt-1 text-base text-gray-900">{tracking.description}</p>
+                <p className="text-sm text-black">Descripción</p>
+                <p className="mt-1 text-base text-black">{tracking.description}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Transportista</p>
-                <p className="mt-1 text-base text-gray-900">{tracking.carrier || '-'}</p>
+                <p className="text-sm text-black">Transportista</p>
+                <p className="mt-1 text-base text-black">{tracking.carrier || '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Origen</p>
-                <p className="mt-1 text-base text-gray-900">{tracking.origin || '-'}</p>
+                <p className="text-sm text-black">Origen</p>
+                <p className="mt-1 text-base text-black">{tracking.origin || '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Destino</p>
-                <p className="mt-1 text-base text-gray-900">{tracking.destination || '-'}</p>
+                <p className="text-sm text-black">Destino</p>
+                <p className="mt-1 text-base text-black">{tracking.destination || '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Peso</p>
-                <p className="mt-1 text-base text-gray-900">
+                <p className="text-sm text-black">Peso</p>
+                <p className="mt-1 text-base text-black">
                   {tracking.weight ? `${tracking.weight} kg` : '-'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Contacto</p>
-                <p className="mt-1 text-base text-gray-900">{tracking.contact?.name || '-'}</p>
+                <p className="text-sm text-black">Contacto</p>
+                <p className="mt-1 text-base text-black">{tracking.contact?.name || '-'}</p>
               </div>
               {tracking.notes && (
                 <div className="md:col-span-2">
-                  <p className="text-sm text-gray-500">Notas</p>
-                  <p className="mt-1 text-base text-gray-900 whitespace-pre-wrap">{tracking.notes}</p>
+                  <p className="text-sm text-black">Notas</p>
+                  <p className="mt-1 text-base text-black whitespace-pre-wrap">{tracking.notes}</p>
                 </div>
               )}
             </>
@@ -333,7 +476,7 @@ export default function TrackingDetailPage() {
 
         {/* Timeline Visual */}
         <div className="border-t pt-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Estado del Envío</h2>
+          <h2 className="text-lg font-semibold text-black mb-6">Estado del Envío</h2>
           
           <div className="relative">
             {/* Línea de conexión */}
@@ -368,11 +511,11 @@ export default function TrackingDetailPage() {
                     <div className="ml-4 flex-1 min-w-0">
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className={`text-sm font-medium ${isCompleted ? 'text-gray-900' : 'text-gray-500'}`}>
+                          <p className={`text-sm font-medium ${isCompleted ? 'text-black' : 'text-black'}`}>
                             {status.label}
                           </p>
                           {date && (
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="text-sm text-black mt-1">
                               {new Date(date).toLocaleDateString('es-ES', {
                                 day: '2-digit',
                                 month: 'long',

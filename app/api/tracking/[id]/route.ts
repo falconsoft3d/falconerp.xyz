@@ -14,6 +14,7 @@ const updateTrackingSchema = z.object({
   weight: z.number().optional().nullable(),
   notes: z.string().optional().nullable(),
   contactId: z.string().optional().nullable(),
+  productId: z.string().optional().nullable(),
 });
 
 // GET - Obtener un seguimiento por ID
@@ -55,11 +56,25 @@ export async function GET(
             country: true,
           },
         },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            price: true,
+          },
+        },
         company: {
           select: {
             id: true,
             name: true,
             currency: true,
+          },
+        },
+        invoice: {
+          select: {
+            id: true,
+            number: true,
           },
         },
       },
@@ -132,6 +147,24 @@ export async function PUT(
       }
     }
 
+    // Si se proporciona productId, verificar que existe y pertenece a la empresa
+    if (validatedData.productId) {
+      const product = await prisma.product.findFirst({
+        where: {
+          id: validatedData.productId,
+          companyId: existingTracking.companyId,
+          userId,
+        },
+      });
+
+      if (!product) {
+        return NextResponse.json(
+          { error: 'Producto no encontrado' },
+          { status: 404 }
+        );
+      }
+    }
+
     // Preparar datos de actualización
     const updateData: any = {};
     
@@ -143,6 +176,7 @@ export async function PUT(
     if (validatedData.weight !== undefined) updateData.weight = validatedData.weight;
     if (validatedData.notes !== undefined) updateData.notes = validatedData.notes;
     if (validatedData.contactId !== undefined) updateData.contactId = validatedData.contactId;
+    if (validatedData.productId !== undefined) updateData.productId = validatedData.productId;
 
     // Manejo especial para cambios de estado (actualizar fecha correspondiente)
     if (validatedData.status !== undefined && validatedData.status !== existingTracking.status) {
@@ -182,6 +216,14 @@ export async function PUT(
             name: true,
             email: true,
             phone: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            price: true,
           },
         },
       },

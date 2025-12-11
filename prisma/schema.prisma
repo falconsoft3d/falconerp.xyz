@@ -46,9 +46,11 @@ model User {
   contacts  Contact[]
   products  Product[]
   invoices  Invoice[]
+  quotes    Quote[]
   attendances Attendance[]
   projects  Project[]
-  tasks     Task[]
+  tasks     Task[] @relation("TaskCreator")
+  assignedTasks Task[] @relation("TaskAssignee")
   trackings Tracking[]
 }
 
@@ -79,6 +81,10 @@ model Company {
   salesInvoiceNextNumber Int       @default(1)       // Próximo número de factura de venta
   purchaseInvoicePrefix  String    @default("INVO")  // Prefijo para facturas de compra
   purchaseInvoiceNextNumber Int    @default(1)       // Próximo número de factura de compra
+  
+  // Secuencias de cotizaciones
+  quotePrefix            String    @default("COT")   // Prefijo para cotizaciones
+  quoteNextNumber        Int       @default(1)       // Próximo número de cotización
   
   // Configuración SMTP para envío de correos
   smtpHost     String?  // smtp.gmail.com
@@ -113,6 +119,7 @@ model Company {
   contacts  Contact[]
   products  Product[]
   invoices  Invoice[]
+  quotes    Quote[]
   attendances Attendance[]
   projects  Project[]
   defaultUsers User[] @relation("DefaultCompany")
@@ -153,6 +160,7 @@ model Contact {
   updatedAt   DateTime  @updatedAt
   
   invoices    Invoice[]
+  quotes      Quote[]
   crmOpportunities CrmOpportunity[]
   trackings   Tracking[]
   
@@ -195,6 +203,8 @@ model Product {
   updatedAt   DateTime  @updatedAt
   
   invoiceItems InvoiceItem[]
+  quoteItems   QuoteItem[]
+  trackings    Tracking[]
   
   @@unique([companyId, code])
   @@index([userId])
@@ -252,6 +262,8 @@ model Invoice {
   items         InvoiceItem[]
   attachments   InvoiceAttachment[]
   comments      InvoiceComment[]
+  trackings     Tracking[]
+  quoteInvoice  Quote?        @relation("QuoteToInvoice")
   
   @@unique([companyId, number])
   @@index([userId])
@@ -316,6 +328,123 @@ model InvoiceAttachment {
   createdAt   DateTime @default(now())
   
   @@index([invoiceId])
+}
+
+model Quote {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  contactId     String
+  contact       Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  
+  // Número de cotización
+  number        String    // Número de cotización (ej: COT-2024-001)
+  
+  // Fechas
+  date          DateTime  @default(now())
+  expiryDate    DateTime? // Fecha de expiración de la cotización
+  
+  // Moneda
+  currency      String    @default("EUR") // Moneda de la cotización
+  
+  // Importes
+  subtotal      Float     // Suma de items sin IVA
+  taxAmount     Float     // Total de IVA
+  total         Float     // Total con IVA
+  
+  // Estado de la cotización
+  status        QuoteStatus @default(QUOTE) // QUOTE o ORDER
+  
+  // Notas
+  notes         String?
+  
+  // Relación con factura generada
+  invoiceId     String?   @unique
+  invoice       Invoice?  @relation("QuoteToInvoice", fields: [invoiceId], references: [id], onDelete: SetNull)
+  
+  // Token público para descarga sin autenticación
+  publicToken   String?   @unique  // Token único para acceso público al PDF
+  
+  // Archivos adjuntos y comentarios
+  attachments   QuoteAttachment[]
+  comments      QuoteComment[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  items         QuoteItem[]
+  
+  @@unique([companyId, number])
+  @@index([userId])
+  @@index([companyId])
+  @@index([contactId])
+  @@index([status])
+  @@index([date])
+}
+
+enum QuoteStatus {
+  QUOTE       // Cotización
+  ORDER       // Pedido (confirmada)
+}
+
+model QuoteItem {
+  id          String   @id @default(cuid())
+  quoteId     String
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  
+  // Datos del item
+  description String
+  quantity    Float
+  price       Float    // Precio unitario sin IVA
+  tax         Float    // Porcentaje de IVA
+  
+  // Calculados
+  subtotal    Float    // quantity * price
+  taxAmount   Float    // subtotal * (tax / 100)
+  total       Float    // subtotal + taxAmount
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([quoteId])
+  @@index([productId])
+  @@index([projectId])
+}
+
+model QuoteAttachment {
+  id          String   @id @default(cuid())
+  quoteId     String
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  
+  fileName    String   // Nombre original del archivo
+  fileUrl     String   // URL o path del archivo
+  fileSize    Int      // Tamaño en bytes
+  mimeType    String   // Tipo MIME (application/pdf, image/jpeg, etc.)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([quoteId])
+}
+
+model QuoteComment {
+  id          String   @id @default(cuid())
+  quoteId     String
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  
+  comment     String   @db.Text
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([quoteId])
 }
 
 model InvoiceComment {
@@ -404,6 +533,7 @@ model Project {
   tasks       Task[]
   attendances Attendance[]
   invoiceItems InvoiceItem[]
+  quoteItems   QuoteItem[]
   
   @@index([userId])
   @@index([companyId])
@@ -419,7 +549,10 @@ enum ProjectStatus {
 model Task {
   id          String   @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation("TaskCreator", fields: [userId], references: [id], onDelete: Cascade)
+  
+  assignedToId String?
+  assignedTo   User?   @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -429,6 +562,8 @@ model Task {
   completed   Boolean  @default(false)
   
   priority    TaskPriority @default(MEDIUM)
+  
+  estimatedHours Decimal? @db.Decimal(10, 2) // Horas estimadas para completar la tarea
   
   dueDate     DateTime?
   completedAt DateTime?
@@ -442,6 +577,7 @@ model Task {
   
   @@index([userId])
   @@index([projectId])
+  @@index([assignedToId])
   @@index([completed])
 }
 
@@ -612,6 +748,12 @@ model Tracking {
   contactId   String?
   contact     Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  invoiceId   String?
+  invoice     Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  
   trackingNumber String  // Número de seguimiento único
   description    String  @db.Text
   status         TrackingStatus @default(REQUESTED)
@@ -638,6 +780,8 @@ model Tracking {
   @@index([userId])
   @@index([companyId])
   @@index([contactId])
+  @@index([productId])
+  @@index([invoiceId])
   @@index([status])
   @@index([trackingNumber])
 }

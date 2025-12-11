@@ -10,6 +10,8 @@ const updateTaskSchema = z.object({
   completed: z.boolean().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
   dueDate: z.string().optional().nullable(),
+  assignedToId: z.string().optional().nullable(),
+  estimatedHours: z.number().positive().optional().nullable(),
 });
 
 // PUT - Actualizar tarea
@@ -31,6 +33,14 @@ export async function PUT(
     if (validatedData.title !== undefined) updateData.title = validatedData.title;
     if (validatedData.description !== undefined) updateData.description = validatedData.description;
     if (validatedData.priority !== undefined) updateData.priority = validatedData.priority;
+    
+    if (validatedData.assignedToId !== undefined) {
+      updateData.assignedToId = validatedData.assignedToId || null;
+    }
+    
+    if (validatedData.estimatedHours !== undefined) {
+      updateData.estimatedHours = validatedData.estimatedHours || null;
+    }
     
     if (validatedData.completed !== undefined) {
       updateData.completed = validatedData.completed;

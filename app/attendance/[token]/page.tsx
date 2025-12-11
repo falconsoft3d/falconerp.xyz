@@ -33,6 +33,14 @@ interface Project {
 interface Task {
   id: string;
   title: string;
+  completed: boolean;
+  priority: string;
+  dueDate: string | null;
+  project?: {
+    id: string;
+    name: string;
+    color: string;
+  };
 }
 
 interface AttendanceData {
@@ -54,12 +62,19 @@ export default function AttendanceMobilePage() {
   const [showNotes, setShowNotes] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [myTasks, setMyTasks] = useState<Task[]>([]);
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedTask, setSelectedTask] = useState('');
 
   useEffect(() => {
     if (token) {
       fetchAttendanceData();
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchMyTasks();
     }
   }, [token]);
 
@@ -125,6 +140,40 @@ export default function AttendanceMobilePage() {
     } catch (err) {
       console.error('Error al cargar tareas:', err);
       setTasks([]);
+    }
+  };
+
+  const fetchMyTasks = async () => {
+    if (!token) return;
+    
+    try {
+      const res = await fetch(`/api/public/tasks?token=${token}`);
+      if (res.ok) {
+        const tasksData = await res.json();
+        setMyTasks(tasksData);
+      }
+    } catch (err) {
+      console.error('Error al cargar mis tareas:', err);
+    }
+  };
+
+  const handleToggleTask = async (taskId: string, completed: boolean) => {
+    try {
+      const res = await fetch(`/api/public/tasks?token=${token}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          completed: !completed,
+        }),
+      });
+
+      if (res.ok) {
+        // Actualizar la lista de tareas
+        fetchMyTasks();
+      }
+    } catch (err) {
+      console.error('Error al actualizar tarea:', err);
     }
   };
 
@@ -280,9 +329,6 @@ export default function AttendanceMobilePage() {
             <div className="flex items-start gap-3">
               <div className="text-2xl">{hasOpenAttendance ? '🟢' : '✅'}</div>
               <div className="flex-1">
-                <p className="font-semibold text-gray-800 mb-1">
-                  {hasOpenAttendance ? 'Registro Activo' : 'Último Registro'}
-                </p>
                 <div className="space-y-1 text-sm">
                   <p className="text-gray-600">
                     <span className="font-medium">Entrada:</span>{' '}
@@ -301,6 +347,9 @@ export default function AttendanceMobilePage() {
                     </p>
                   )}
                 </div>
+                <p className="font-semibold text-gray-800 mt-2">
+                  {hasOpenAttendance ? 'Registro Activo' : 'Último Registro'}
+                </p>
               </div>
             </div>
           </div>
@@ -361,8 +410,9 @@ export default function AttendanceMobilePage() {
           </div>
         )}
 
-        {/* Notas colapsables */}
+        {/* Agregar Nota */}
         <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">📝 Agregar Nota</h3>
           {!showNotes ? (
             <button
               onClick={() => setShowNotes(true)}
@@ -376,7 +426,7 @@ export default function AttendanceMobilePage() {
           ) : (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-700">
+                <label className="text-xs font-medium text-gray-600">
                   Notas (opcional)
                 </label>
                 <button
@@ -402,6 +452,54 @@ export default function AttendanceMobilePage() {
             </div>
           )}
         </div>
+
+        {/* Mis Tareas */}
+        {myTasks.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">✅ Mis Tareas</h3>
+            <div className="border-2 border-gray-200 rounded-xl p-3 max-h-64 overflow-y-auto">
+              <div className="space-y-2">
+                {myTasks.map((task) => (
+                  <label
+                    key={task.id}
+                    className="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={task.completed}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleToggleTask(task.id, task.completed);
+                      }}
+                      className="mt-0.5 w-5 h-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium ${task.completed ? 'line-through text-gray-500' : 'text-gray-800'}`}>
+                        {task.title}
+                      </p>
+                      {task.project && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <div 
+                            className="w-2 h-2 rounded-full shrink-0" 
+                            style={{ backgroundColor: task.project.color }}
+                          ></div>
+                          <span className="text-xs text-gray-600 truncate">
+                            {task.project.name}
+                          </span>
+                        </div>
+                      )}
+                      {task.dueDate && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          📅 {new Date(task.dueDate).toLocaleDateString('es-ES')}
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Botones de acción */}
         <div className="space-y-3">

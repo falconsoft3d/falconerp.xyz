@@ -26,6 +26,18 @@ export async function GET(
             logo: true,
             primaryColor: true,
             secondaryColor: true,
+            phone: true,
+            email: true,
+            address: true,
+            city: true,
+            country: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
       },

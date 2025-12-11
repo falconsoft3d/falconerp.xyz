@@ -7,6 +7,12 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface Task {
   id: string;
   title: string;
@@ -16,6 +22,7 @@ interface Task {
   dueDate: string | null;
   completedAt: string | null;
   order: number;
+  assignedTo?: User | null;
 }
 
 interface Project {
@@ -34,19 +41,32 @@ export default function ProjectDetailPage() {
   const projectId = params.id as string;
 
   const [project, setProject] = useState<Project | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showNewTask, setShowNewTask] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
     priority: 'MEDIUM',
     dueDate: '',
+    assignedToId: '',
+    estimatedHours: '',
+  });
+  const [editTask, setEditTask] = useState({
+    title: '',
+    description: '',
+    priority: 'MEDIUM',
+    dueDate: '',
+    assignedToId: '',
+    estimatedHours: '',
   });
 
   useEffect(() => {
     if (projectId) {
       fetchProject();
+      fetchUsers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
@@ -65,6 +85,18 @@ export default function ProjectDetailPage() {
       setError('Error al cargar proyecto');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error);
     }
   };
 
@@ -89,17 +121,20 @@ export default function ProjectDetailPage() {
     if (!newTask.title.trim()) return;
 
     try {
+      const taskData = {
+        ...newTask,
+        projectId,
+        estimatedHours: newTask.estimatedHours ? parseFloat(newTask.estimatedHours) : undefined,
+      };
+
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newTask,
-          projectId,
-        }),
+        body: JSON.stringify(taskData),
       });
 
       if (res.ok) {
-        setNewTask({ title: '', description: '', priority: 'MEDIUM', dueDate: '' });
+        setNewTask({ title: '', description: '', priority: 'MEDIUM', dueDate: '', assignedToId: '', estimatedHours: '' });
         setShowNewTask(false);
         fetchProject();
       }
@@ -117,6 +152,55 @@ export default function ProjectDetailPage() {
       });
 
       if (res.ok) {
+        fetchProject();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleStartEdit = (task: Task) => {
+    setEditingTaskId(task.id);
+    setEditTask({
+      title: task.title,
+      description: task.description || '',
+      priority: task.priority,
+      dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+      assignedToId: task.assignedTo?.id || '',
+      estimatedHours: '',
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTaskId(null);
+    setEditTask({
+      title: '',
+      description: '',
+      priority: 'MEDIUM',
+      dueDate: '',
+      assignedToId: '',
+      estimatedHours: '',
+    });
+  };
+
+  const handleUpdateTask = async (e: React.FormEvent, taskId: string) => {
+    e.preventDefault();
+    if (!editTask.title.trim()) return;
+
+    try {
+      const taskData = {
+        ...editTask,
+        estimatedHours: editTask.estimatedHours ? parseFloat(editTask.estimatedHours) : null,
+      };
+
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData),
+      });
+
+      if (res.ok) {
+        setEditingTaskId(null);
         fetchProject();
       }
     } catch (error) {
@@ -168,6 +252,17 @@ export default function ProjectDetailPage() {
 
   const stats = getCompletionStats();
 
+  const handleCopyPublicLink = () => {
+    const publicUrl = `${window.location.origin}/public/projects/${projectId}`;
+    navigator.clipboard.writeText(publicUrl);
+    alert('¡Enlace copiado al portapapeles! 📋');
+  };
+
+  const handleOpenPublicView = () => {
+    const publicUrl = `/public/projects/${projectId}`;
+    window.open(publicUrl, '_blank');
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -183,6 +278,21 @@ export default function ProjectDetailPage() {
           {project.description && (
             <p className="text-gray-600 mt-2">{project.description}</p>
           )}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleCopyPublicLink}
+            variant="secondary"
+            className="flex items-center gap-2"
+          >
+            📋 Copiar Enlace
+          </Button>
+          <Button
+            onClick={handleOpenPublicView}
+            className="flex items-center gap-2"
+          >
+            🔗 Vista Pública
+          </Button>
         </div>
       </div>
 
@@ -228,7 +338,7 @@ export default function ProjectDetailPage() {
                 placeholder="¿Qué hay que hacer?"
                 required
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
                   <select
@@ -248,6 +358,30 @@ export default function ProjectDetailPage() {
                   value={newTask.dueDate}
                   onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
                 />
+                <Input
+                  label="Horas estimadas"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={newTask.estimatedHours}
+                  onChange={(e) => setNewTask({ ...newTask, estimatedHours: e.target.value })}
+                  placeholder="ej: 8"
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Asignar a</label>
+                  <select
+                    value={newTask.assignedToId}
+                    onChange={(e) => setNewTask({ ...newTask, assignedToId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white text-gray-900"
+                  >
+                    <option value="">Sin asignar</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="secondary" onClick={() => setShowNewTask(false)}>
@@ -269,55 +403,146 @@ export default function ProjectDetailPage() {
               project.tasks.map((task) => (
                 <div
                   key={task.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                  className={`rounded-lg border transition-all ${
                     task.completed
                       ? 'bg-gray-50 border-gray-200'
                       : 'bg-white border-gray-300 hover:border-teal-400'
                   }`}
                 >
-                  {/* Checkbox */}
-                  <input
-                    type="checkbox"
-                    checked={task.completed}
-                    onChange={() => handleToggleTask(task.id, task.completed)}
-                    className="mt-1 w-5 h-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
-                  />
+                  {editingTaskId === task.id ? (
+                    // Edit Form
+                    <form onSubmit={(e) => handleUpdateTask(e, task.id)} className="p-3 space-y-3">
+                      <Input
+                        label="Título de la tarea *"
+                        value={editTask.title}
+                        onChange={(e) => setEditTask({ ...editTask, title: e.target.value })}
+                        placeholder="¿Qué hay que hacer?"
+                        required
+                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                        <textarea
+                          value={editTask.description}
+                          onChange={(e) => setEditTask({ ...editTask, description: e.target.value })}
+                          placeholder="Descripción opcional..."
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white text-gray-900"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Prioridad</label>
+                          <select
+                            value={editTask.priority}
+                            onChange={(e) => setEditTask({ ...editTask, priority: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white text-gray-900"
+                          >
+                            <option value="LOW">Baja</option>
+                            <option value="MEDIUM">Media</option>
+                            <option value="HIGH">Alta</option>
+                            <option value="URGENT">Urgente</option>
+                          </select>
+                        </div>
+                        <Input
+                          label="Fecha límite"
+                          type="date"
+                          value={editTask.dueDate}
+                          onChange={(e) => setEditTask({ ...editTask, dueDate: e.target.value })}
+                        />
+                        <Input
+                          label="Horas estimadas"
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          value={editTask.estimatedHours}
+                          onChange={(e) => setEditTask({ ...editTask, estimatedHours: e.target.value })}
+                          placeholder="ej: 8"
+                        />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Asignar a</label>
+                          <select
+                            value={editTask.assignedToId}
+                            onChange={(e) => setEditTask({ ...editTask, assignedToId: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white text-gray-900"
+                          >
+                            <option value="">Sin asignar</option>
+                            {users.map((user) => (
+                              <option key={user.id} value={user.id}>
+                                {user.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button type="button" variant="secondary" onClick={handleCancelEdit}>
+                          Cancelar
+                        </Button>
+                        <Button type="submit">Guardar Cambios</Button>
+                      </div>
+                    </form>
+                  ) : (
+                    // Task Display
+                    <div className="flex items-start gap-3 p-3">
+                      {/* Checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={task.completed}
+                        onChange={() => handleToggleTask(task.id, task.completed)}
+                        className="mt-1 w-5 h-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                      />
 
-                  {/* Task Content */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3
-                        className={`font-medium ${
-                          task.completed ? 'line-through text-gray-500' : 'text-gray-800'
-                        }`}
-                      >
-                        {task.title}
-                      </h3>
-                      {getPriorityBadge(task.priority)}
-                    </div>
-                    {task.description && (
-                      <p className="text-sm text-gray-600 mb-2">{task.description}</p>
-                    )}
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      {task.dueDate && (
-                        <span>📅 {new Date(task.dueDate).toLocaleDateString()}</span>
-                      )}
-                      {task.completedAt && (
-                        <span className="text-green-600">
-                          ✓ Completada {new Date(task.completedAt).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                      {/* Task Content */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3
+                            className={`font-medium ${
+                              task.completed ? 'line-through text-gray-500' : 'text-gray-800'
+                            }`}
+                          >
+                            {task.title}
+                          </h3>
+                          {getPriorityBadge(task.priority)}
+                        </div>
+                        {task.description && (
+                          <p className="text-sm text-gray-600 mb-2">{task.description}</p>
+                        )}
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          {task.dueDate && (
+                            <span>📅 {new Date(task.dueDate).toLocaleDateString()}</span>
+                          )}
+                          {task.assignedTo && (
+                            <span className="flex items-center gap-1">
+                              👤 {task.assignedTo.name}
+                            </span>
+                          )}
+                          {task.completedAt && (
+                            <span className="text-green-600">
+                              ✓ Completada {new Date(task.completedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                  {/* Delete Button */}
-                  <button
-                    onClick={() => handleDeleteTask(task.id)}
-                    className="text-red-500 hover:text-red-700 p-1"
-                    title="Eliminar tarea"
-                  >
-                    🗑️
-                  </button>
+                      {/* Action Buttons */}
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleStartEdit(task)}
+                          className="text-blue-500 hover:text-blue-700 p-1"
+                          title="Editar tarea"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          title="Eliminar tarea"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))
             )}

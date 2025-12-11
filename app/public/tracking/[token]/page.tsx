@@ -24,11 +24,20 @@ interface Tracking {
     logo: string | null;
     primaryColor: string | null;
     secondaryColor: string | null;
+    phone: string | null;
+    email: string | null;
+    address: string | null;
+    city: string | null;
+    country: string | null;
   };
   contact: {
     name: string;
     email: string | null;
     phone: string | null;
+  } | null;
+  user: {
+    name: string;
+    email: string | null;
   } | null;
 }
 
@@ -128,17 +137,96 @@ export default function PublicTrackingPage() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Logo y nombre de empresa */}
             <div>
               {tracking.company.logo && (
-                <img src={tracking.company.logo} alt={tracking.company.name} className="h-12 mb-2" />
+                <img src={tracking.company.logo} alt={tracking.company.name} className="h-16 mb-3" />
               )}
-              <h1 className="text-2xl font-bold text-gray-900">{tracking.company.name}</h1>
-              <p className="text-sm text-gray-500">Seguimiento de Envío</p>
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">{tracking.company.name}</h1>
+              <p className="text-sm text-gray-500 mb-3">Seguimiento de Envío</p>
+              
+              {/* Datos de la empresa */}
+              <div className="space-y-1 text-sm">
+                {tracking.company.phone && (
+                  <div className="flex items-center text-gray-700">
+                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    {tracking.company.phone}
+                  </div>
+                )}
+                {tracking.company.email && (
+                  <div className="flex items-center text-gray-700">
+                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    {tracking.company.email}
+                  </div>
+                )}
+                {tracking.company.address && (
+                  <div className="flex items-start text-gray-700">
+                    <svg className="w-4 h-4 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>
+                      {tracking.company.address}
+                      {tracking.company.city && `, ${tracking.company.city}`}
+                      {tracking.company.country && `, ${tracking.company.country}`}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Vendedor */}
+            {tracking.user && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Atendido por:</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center text-gray-700">
+                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    {tracking.user.name}
+                  </div>
+                  {tracking.user.email && (
+                    <div className="flex items-center text-gray-700">
+                      <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      {tracking.user.email}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Número de seguimiento y días */}
             <div className="text-right">
               <p className="text-sm text-gray-500">Número de Seguimiento</p>
               <p className="text-2xl font-bold text-gray-900">{tracking.trackingNumber}</p>
+              <div className="mt-3 pt-3 border-t">
+                <div className="text-3xl font-bold text-indigo-600">
+                  {(() => {
+                    const startDate = new Date(tracking.requestedDate);
+                    const endDate = tracking.deliveredDate ? new Date(tracking.deliveredDate) : new Date();
+                    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    return diffDays;
+                  })()}
+                </div>
+                <div className="text-sm text-gray-600 font-medium">
+                  {(() => {
+                    const startDate = new Date(tracking.requestedDate);
+                    const endDate = tracking.deliveredDate ? new Date(tracking.deliveredDate) : new Date();
+                    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    return diffDays === 1 ? 'día' : 'días';
+                  })()} {tracking.deliveredDate ? 'totales' : 'transcurridos'}
+                </div>
+              </div>
             </div>
           </div>
         </div>

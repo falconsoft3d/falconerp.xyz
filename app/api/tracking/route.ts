@@ -7,6 +7,7 @@ import { z } from 'zod';
 const createTrackingSchema = z.object({
   companyId: z.string(),
   contactId: z.string().optional().nullable(),
+  productId: z.string().optional().nullable(),
   trackingNumber: z.string().min(1, 'El número de seguimiento es requerido'),
   description: z.string().min(1, 'La descripción es requerida'),
   status: z.enum(['REQUESTED', 'RECEIVED', 'PAID', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED']).default('REQUESTED'),
@@ -96,6 +97,12 @@ export async function GET(request: NextRequest) {
             phone: true,
           },
         },
+        invoice: {
+          select: {
+            id: true,
+            number: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -168,6 +175,7 @@ export async function POST(request: NextRequest) {
         userId,
         companyId: validatedData.companyId,
         contactId: validatedData.contactId || null,
+        productId: validatedData.productId || null,
         trackingNumber: validatedData.trackingNumber,
         description: validatedData.description,
         status: validatedData.status,

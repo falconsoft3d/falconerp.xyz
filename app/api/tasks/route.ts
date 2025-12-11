@@ -10,6 +10,8 @@ const taskSchema = z.object({
   description: z.string().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional().default('MEDIUM'),
   dueDate: z.string().optional(),
+  assignedToId: z.string().optional(),
+  estimatedHours: z.number().positive().optional(),
 });
 
 // GET - Listar tareas de un proyecto
@@ -58,6 +60,15 @@ export async function GET(request: NextRequest) {
         userId: effectiveUserId,
         projectId,
       },
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
       orderBy: [
         { completed: 'asc' },
         { order: 'asc' },
@@ -102,7 +113,18 @@ export async function POST(request: NextRequest) {
         description: validatedData.description,
         priority: validatedData.priority || 'MEDIUM',
         dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
+        assignedToId: validatedData.assignedToId || null,
+        estimatedHours: validatedData.estimatedHours || null,
         order: (lastTask?.order || 0) + 1,
+      },
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 

@@ -14,14 +14,23 @@ interface Contact {
   name: string;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  code: string;
+  price: number;
+}
+
 export default function NewTrackingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [formData, setFormData] = useState({
     companyId: '',
     contactId: '',
+    productId: '',
     trackingNumber: '',
     description: '',
     origin: '',
@@ -38,6 +47,7 @@ export default function NewTrackingPage() {
   useEffect(() => {
     if (formData.companyId) {
       fetchContacts(formData.companyId);
+      fetchProducts(formData.companyId);
       if (!formData.trackingNumber) {
         generateTrackingNumber(formData.companyId);
       }
@@ -88,6 +98,18 @@ export default function NewTrackingPage() {
       }
     } catch (error) {
       console.error('Error al cargar contactos:', error);
+    }
+  };
+
+  const fetchProducts = async (companyId: string) => {
+    try {
+      const response = await fetch(`/api/products?companyId=${companyId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setProducts(data);
+      }
+    } catch (error) {
+      console.error('Error al cargar productos:', error);
     }
   };
 
@@ -206,6 +228,26 @@ export default function NewTrackingPage() {
                 {contacts.map((contact) => (
                   <option key={contact.id} value={contact.id}>
                     {contact.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Producto (Opcional) */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">
+                Producto (Opcional)
+              </label>
+              <select
+                name="productId"
+                value={formData.productId}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+              >
+                <option value="">Sin producto</option>
+                {products.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name} ({product.code}) - ${product.price}
                   </option>
                 ))}
               </select>

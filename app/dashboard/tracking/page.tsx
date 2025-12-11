@@ -11,6 +11,11 @@ interface Contact {
   phone?: string | null;
 }
 
+interface Invoice {
+  id: string;
+  number: string;
+}
+
 interface Tracking {
   id: string;
   trackingNumber: string;
@@ -27,6 +32,7 @@ interface Tracking {
   inTransitDate?: Date | null;
   deliveredDate?: Date | null;
   contact?: Contact | null;
+  invoice?: Invoice | null;
   createdAt: Date;
 }
 
@@ -135,6 +141,14 @@ export default function TrackingPage() {
     return dates.length > 0 ? new Date(Math.max(...dates.map(d => new Date(d).getTime()))) : new Date(tracking.createdAt);
   };
 
+  const getDaysSinceStart = (tracking: Tracking): number => {
+    const startDate = tracking.requestedDate ? new Date(tracking.requestedDate) : new Date(tracking.createdAt);
+    const endDate = tracking.deliveredDate ? new Date(tracking.deliveredDate) : new Date();
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
   const filteredTrackings = trackings.filter(tracking => {
     const matchesSearch = 
       tracking.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -149,15 +163,27 @@ export default function TrackingPage() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">📦 Seguimiento</h1>
-        <Link
-          href="/dashboard/tracking/new"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          <svg className="mr-2 -ml-1 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nuevo Seguimiento
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href="/public/tracking"
+            target="_blank"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          >
+            <svg className="mr-2 -ml-1 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            Buscador Público
+          </Link>
+          <Link
+            href="/dashboard/tracking/new"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <svg className="mr-2 -ml-1 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo Seguimiento
+          </Link>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -235,7 +261,13 @@ export default function TrackingPage() {
                     Transportista
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                    Factura
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                     Última Actualización
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                    Días
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">
                     Acciones
@@ -245,7 +277,7 @@ export default function TrackingPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredTrackings.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-sm text-black">
+                    <td colSpan={9} className="px-6 py-12 text-center text-sm text-black">
                       No hay seguimientos para mostrar
                     </td>
                   </tr>
@@ -270,8 +302,25 @@ export default function TrackingPage() {
                         <div className="text-sm text-gray-900">{tracking.carrier || '-'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
+                        {tracking.invoice ? (
+                          <Link
+                            href={`/dashboard/invoices/${tracking.invoice.id}`}
+                            className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                          >
+                            {tracking.invoice.number}
+                          </Link>
+                        ) : (
+                          <span className="text-sm text-gray-500">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
                           {new Date(getLatestDate(tracking)).toLocaleDateString('es-ES')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900">
+                          {getDaysSinceStart(tracking)} {getDaysSinceStart(tracking) === 1 ? 'día' : 'días'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
