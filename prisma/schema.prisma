@@ -56,6 +56,7 @@ model User {
   equipment Equipment[]
   workOrders WorkOrder[]
   responsibleWorkOrders WorkOrder[] @relation("WorkOrderResponsible")
+  properties Property[]
 }
 
 model Company {
@@ -132,6 +133,7 @@ model Company {
   crmOpportunities CrmOpportunity[]
   trackings Tracking[]
   workOrders WorkOrder[]
+  properties Property[]
   
   @@index([userId])
   @@index([userId, active])
@@ -170,6 +172,7 @@ model Contact {
   crmOpportunities CrmOpportunity[]
   trackings   Tracking[]
   equipment   Equipment[]
+  propertyContacts PropertyContact[]
   
   @@index([userId])
   @@index([companyId])
@@ -567,6 +570,7 @@ model Project {
   quoteItems   QuoteItem[]
   staff       ProjectStaff[] // Personal asignado al proyecto
   expenses    ProjectExpense[] // Gastos del proyecto
+  properties  Property[] // Propiedades asociadas al proyecto
   
   @@index([userId])
   @@index([companyId])
@@ -973,4 +977,56 @@ enum WorkOrderItemStatus {
   PENDING     // Pendiente
   IN_PROGRESS // En proceso
   COMPLETED   // Completado
+}
+
+// Modelo de Propiedades
+model Property {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId             String
+  company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  code                  String   // Código de la propiedad
+  address               String   // Dirección
+  block                 String?  // Bloque
+  number                String?  // Número
+  
+  projectId             String?
+  project               Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  
+  constructionDate      DateTime? // Fecha de construcción
+  contractAmount        Decimal?  @db.Decimal(15, 2) // Importe de contrato
+  contractStartDate     DateTime? // Fecha de inicio de contrato
+  contractEndDate       DateTime? // Fecha fin de contrato
+  
+  notes                 String?  @db.Text
+  active                Boolean  @default(true)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  contacts              PropertyContact[]
+  
+  @@unique([companyId, code])
+  @@index([userId])
+  @@index([companyId])
+  @@index([projectId])
+}
+
+model PropertyContact {
+  id             String   @id @default(cuid())
+  propertyId     String
+  property       Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  contactId      String
+  contact        Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  
+  responsibility String   // Responsabilidad (ej: "Presidente Bloque A")
+  
+  createdAt      DateTime @default(now())
+  
+  @@index([propertyId])
+  @@index([contactId])
 }
