@@ -53,6 +53,9 @@ model User {
   assignedTasks Task[] @relation("TaskAssignee")
   trackings Tracking[]
   projectStaff ProjectStaff[]
+  equipment Equipment[]
+  workOrders WorkOrder[]
+  responsibleWorkOrders WorkOrder[] @relation("WorkOrderResponsible")
 }
 
 model Company {
@@ -123,10 +126,12 @@ model Company {
   quotes    Quote[]
   attendances Attendance[]
   projects  Project[]
+  equipment Equipment[]
   defaultUsers User[] @relation("DefaultCompany")
   crmPipelines CrmPipeline[]
   crmOpportunities CrmOpportunity[]
   trackings Tracking[]
+  workOrders WorkOrder[]
   
   @@index([userId])
   @@index([userId, active])
@@ -164,6 +169,7 @@ model Contact {
   quotes      Quote[]
   crmOpportunities CrmOpportunity[]
   trackings   Tracking[]
+  equipment   Equipment[]
   
   @@index([userId])
   @@index([companyId])
@@ -207,6 +213,7 @@ model Product {
   quoteItems   QuoteItem[]
   trackings    Tracking[]
   projects     Project[]
+  workOrderItems WorkOrderItem[]
   
   @@unique([companyId, code])
   @@index([userId])
@@ -368,8 +375,17 @@ model Quote {
   invoiceId     String?   @unique
   invoice       Invoice?  @relation("QuoteToInvoice", fields: [invoiceId], references: [id], onDelete: SetNull)
   
+  // Relación con orden de trabajo generada
+  workOrderId   String?   @unique
+  workOrder     WorkOrder? @relation("QuoteToWorkOrder", fields: [workOrderId], references: [id], onDelete: SetNull)
+  
   // Token público para descarga sin autenticación
   publicToken   String?   @unique  // Token único para acceso público al PDF
+  
+  // Aprobación del cliente
+  clientApprovalStatus  QuoteClientApproval @default(PENDING)
+  clientApprovedAt      DateTime?
+  clientRejectionReason String?
   
   // Archivos adjuntos y comentarios
   attachments   QuoteAttachment[]
@@ -386,11 +402,19 @@ model Quote {
   @@index([contactId])
   @@index([status])
   @@index([date])
+  @@index([publicToken])
+  @@index([clientApprovalStatus])
 }
 
 enum QuoteStatus {
   QUOTE       // Cotización
   ORDER       // Pedido (confirmada)
+}
+
+enum QuoteClientApproval {
+  PENDING     // Pendiente de aprobación
+  APPROVED    // Aprobado por el cliente
+  REJECTED    // Rechazado por el cliente
 }
 
 model QuoteItem {
@@ -542,6 +566,7 @@ model Project {
   invoiceItems InvoiceItem[]
   quoteItems   QuoteItem[]
   staff       ProjectStaff[] // Personal asignado al proyecto
+  expenses    ProjectExpense[] // Gastos del proyecto
   
   @@index([userId])
   @@index([companyId])
@@ -567,6 +592,34 @@ model ProjectStaff {
   @@unique([projectId, userId]) // Un usuario solo puede estar asignado una vez por proyecto
   @@index([projectId])
   @@index([userId])
+}
+
+// Gastos de proyectos (materiales, equipos, mano de obra)
+model ProjectExpense {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  type        ExpenseType // Tipo de gasto: MATERIAL, EQUIPMENT, LABOR
+  description String   // Descripción del gasto
+  quantity    Decimal  @db.Decimal(10, 2) // Cantidad
+  unitPrice   Decimal  @db.Decimal(10, 2) // Precio unitario
+  totalPrice  Decimal  @db.Decimal(10, 2) // Precio total (quantity * unitPrice)
+  
+  date        DateTime @default(now()) // Fecha del gasto
+  notes       String?  @db.Text
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([projectId])
+  @@index([type])
+}
+
+enum ExpenseType {
+  MATERIAL    // Gastos de materiales
+  EQUIPMENT   // Gastos de equipos
+  LABOR       // Gastos de mano de obra
 }
 
 enum ProjectStatus {
@@ -823,4 +876,101 @@ enum TrackingStatus {
   SHIPPED         // Enviado
   IN_TRANSIT      // En Tránsito
   DELIVERED       // Llegó
+}
+
+// Modelo de Equipos
+model Equipment {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  code        String   // Código del equipo
+  name        String   // Nombre del equipo
+  
+  ownerId     String?  // Propietario (contacto)
+  owner       Contact? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  
+  licensePlate String? // Matrícula
+  kilometers   Float?  @default(0) // Kilómetros
+  hours        Float?  @default(0) // Horas
+  
+  active      Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([companyId, code])
+  @@index([userId])
+  @@index([companyId])
+  @@index([ownerId])
+}
+
+// Modelo de Órdenes de Trabajo
+model WorkOrder {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId         String
+  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  number            String   // Número de la orden (ej: OT-2024-001)
+  date              DateTime @default(now())
+  scheduledDate     DateTime // Fecha programada con hora
+  
+  approvedByClient  Boolean  @default(false) // Aprobado por cliente
+  
+  responsibleId     String   // Responsable (usuario)
+  responsible       User     @relation("WorkOrderResponsible", fields: [responsibleId], references: [id])
+  
+  notes             String?  @db.Text
+  publicToken       String?  @unique // Token para enlace público
+  active            Boolean  @default(true)
+  
+  // Relación con cotización origen
+  quote             Quote?   @relation("QuoteToWorkOrder")
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  items             WorkOrderItem[]
+  
+  @@unique([companyId, number])
+  @@index([userId])
+  @@index([companyId])
+  @@index([responsibleId])
+  @@index([publicToken])
+  @@index([date])
+}
+
+model WorkOrderItem {
+  id            String     @id @default(cuid())
+  workOrderId   String
+  workOrder     WorkOrder  @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  
+  productId     String
+  product       Product    @relation(fields: [productId], references: [id])
+  
+  description   String
+  quantity      Float
+  durationHours Float      @default(1) // Duración estimada en horas
+  status        WorkOrderItemStatus @default(PENDING) // Estado de la línea
+  
+  startedAt     DateTime?  // Fecha/hora de inicio
+  completedAt   DateTime?  // Fecha/hora de finalización
+  
+  createdAt     DateTime   @default(now())
+  
+  @@index([workOrderId])
+  @@index([productId])
+  @@index([status])
+}
+
+enum WorkOrderItemStatus {
+  PENDING     // Pendiente
+  IN_PROGRESS // En proceso
+  COMPLETED   // Completado
 }

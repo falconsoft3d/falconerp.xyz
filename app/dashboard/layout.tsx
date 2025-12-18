@@ -144,6 +144,26 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
       href: '/dashboard/projects',
     },
     {
+      name: 'Equipos',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h.01M12 7h.01M16 7h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2-2 2 2m-2-2v6m7-3a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12h3m15 0h-3M9 20h6M7 16h10a1 1 0 001-1v-2a1 1 0 00-1-1H7a1 1 0 00-1 1v2a1 1 0 001 1z" />
+        </svg>
+      ),
+      href: '/dashboard/equipment',
+    },
+    {
+      name: 'Órdenes de Trabajo',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+      ),
+      href: '/dashboard/work-orders',
+    },
+    {
       name: 'Seguimiento',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

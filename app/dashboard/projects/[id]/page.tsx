@@ -44,6 +44,20 @@ interface ProjectStaff {
   createdAt: string;
 }
 
+interface ProjectExpense {
+  id: string;
+  projectId: string;
+  type: 'MATERIAL' | 'EQUIPMENT' | 'LABOR';
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  date: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface Project {
   id: string;
   name: string;
@@ -58,6 +72,7 @@ interface Project {
   product?: Product | null;
   tasks: Task[];
   staff?: ProjectStaff[];
+  expenses?: ProjectExpense[];
 }
 
 export default function ProjectDetailPage() {
@@ -73,6 +88,9 @@ export default function ProjectDetailPage() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [showAddExpense, setShowAddExpense] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [expenses, setExpenses] = useState<ProjectExpense[]>([]);
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -100,6 +118,22 @@ export default function ProjectDetailPage() {
     hourlyRate: '',
     role: '',
   });
+  const [newExpense, setNewExpense] = useState({
+    type: 'MATERIAL',
+    description: '',
+    quantity: '',
+    unitPrice: '',
+    date: new Date().toISOString().split('T')[0],
+    notes: '',
+  });
+  const [editExpense, setEditExpense] = useState({
+    type: 'MATERIAL',
+    description: '',
+    quantity: '',
+    unitPrice: '',
+    date: '',
+    notes: '',
+  });
   const [showEditProject, setShowEditProject] = useState(false);
   const [editProject, setEditProject] = useState({
     name: '',
@@ -116,6 +150,7 @@ export default function ProjectDetailPage() {
     if (projectId) {
       fetchProject();
       fetchUsers();
+      fetchExpenses();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
@@ -247,6 +282,121 @@ export default function ProjectDetailPage() {
     setEditStaff({ hourlyRate: '', role: '' });
   };
 
+  // Funciones para gestión de gastos
+  const fetchExpenses = async () => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/expenses`);
+      if (res.ok) {
+        const data = await res.json();
+        setExpenses(data);
+      }
+    } catch (error) {
+      console.error('Error al cargar gastos:', error);
+    }
+  };
+
+  const handleAddExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newExpense.type || !newExpense.description || !newExpense.quantity || !newExpense.unitPrice) return;
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}/expenses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: newExpense.type,
+          description: newExpense.description,
+          quantity: parseFloat(newExpense.quantity),
+          unitPrice: parseFloat(newExpense.unitPrice),
+          date: newExpense.date,
+          notes: newExpense.notes || null,
+        }),
+      });
+
+      if (res.ok) {
+        setNewExpense({
+          type: 'MATERIAL',
+          description: '',
+          quantity: '',
+          unitPrice: '',
+          date: new Date().toISOString().split('T')[0],
+          notes: '',
+        });
+        setShowAddExpense(false);
+        fetchExpenses();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleUpdateExpense = async (e: React.FormEvent, expenseId: string) => {
+    e.preventDefault();
+    if (!editExpense.type || !editExpense.description || !editExpense.quantity || !editExpense.unitPrice) return;
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}/expenses/${expenseId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: editExpense.type,
+          description: editExpense.description,
+          quantity: parseFloat(editExpense.quantity),
+          unitPrice: parseFloat(editExpense.unitPrice),
+          date: editExpense.date,
+          notes: editExpense.notes || null,
+        }),
+      });
+
+      if (res.ok) {
+        setEditingExpenseId(null);
+        fetchExpenses();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    if (!confirm('¿Eliminar este gasto?')) return;
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}/expenses/${expenseId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        fetchExpenses();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleStartEditExpense = (expense: ProjectExpense) => {
+    setEditingExpenseId(expense.id);
+    setEditExpense({
+      type: expense.type,
+      description: expense.description,
+      quantity: expense.quantity.toString(),
+      unitPrice: expense.unitPrice.toString(),
+      date: new Date(expense.date).toISOString().split('T')[0],
+      notes: expense.notes || '',
+    });
+  };
+
+  const handleCancelEditExpense = () => {
+    setEditingExpenseId(null);
+    setEditExpense({
+      type: 'MATERIAL',
+      description: '',
+      quantity: '',
+      unitPrice: '',
+      date: '',
+      notes: '',
+    });
+  };
+
   // Calcular coste total de personal
   const getStaffCosts = () => {
     if (!project?.staff) return { totalHourlyRate: 0, staffCount: 0 };
@@ -262,6 +412,15 @@ export default function ProjectDetailPage() {
     }, 0);
     const tasksWithCost = project.tasks.filter(t => t.cost && t.cost > 0).length;
     return { totalTasksCost, tasksWithCost };
+  };
+
+  // Calcular coste total de gastos
+  const getExpensesCosts = () => {
+    const materials = expenses.filter(e => e.type === 'MATERIAL').reduce((sum, e) => sum + parseFloat(e.totalPrice.toString()), 0);
+    const equipment = expenses.filter(e => e.type === 'EQUIPMENT').reduce((sum, e) => sum + parseFloat(e.totalPrice.toString()), 0);
+    const labor = expenses.filter(e => e.type === 'LABOR').reduce((sum, e) => sum + parseFloat(e.totalPrice.toString()), 0);
+    const total = materials + equipment + labor;
+    return { materials, equipment, labor, total, count: expenses.length };
   };
 
   // Funciones para editar proyecto
@@ -1081,6 +1240,241 @@ export default function ProjectDetailPage() {
                         </button>
                         <button
                           onClick={() => handleDeleteStaff(staff.id)}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          title="Eliminar"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Gastos del Proyecto */}
+      <Card>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-gray-800">💰 Gastos del Proyecto</h2>
+            <Button onClick={() => setShowAddExpense(!showAddExpense)}>
+              {showAddExpense ? 'Cancelar' : '+ Agregar Gasto'}
+            </Button>
+          </div>
+
+          {/* Resumen de Gastos */}
+          {expenses.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+              <div className="bg-blue-50 rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {getExpensesCosts().materials.toFixed(2)}€
+                </div>
+                <div className="text-xs text-gray-600">Materiales</div>
+              </div>
+              <div className="bg-purple-50 rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold text-purple-600">
+                  {getExpensesCosts().equipment.toFixed(2)}€
+                </div>
+                <div className="text-xs text-gray-600">Equipos</div>
+              </div>
+              <div className="bg-orange-50 rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold text-orange-600">
+                  {getExpensesCosts().labor.toFixed(2)}€
+                </div>
+                <div className="text-xs text-gray-600">Mano de Obra</div>
+              </div>
+              <div className="bg-green-50 rounded-lg p-3 text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {getExpensesCosts().total.toFixed(2)}€
+                </div>
+                <div className="text-xs text-gray-600">Total Gastos</div>
+              </div>
+            </div>
+          )}
+
+          {/* Formulario Agregar Gasto */}
+          {showAddExpense && (
+            <form onSubmit={handleAddExpense} className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Gasto *</label>
+                  <select
+                    value={newExpense.type}
+                    onChange={(e) => setNewExpense({ ...newExpense, type: e.target.value as 'MATERIAL' | 'EQUIPMENT' | 'LABOR' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white text-gray-900"
+                    required
+                  >
+                    <option value="MATERIAL">💎 Materiales</option>
+                    <option value="EQUIPMENT">🔧 Equipos</option>
+                    <option value="LABOR">👷 Mano de Obra</option>
+                  </select>
+                </div>
+                <Input
+                  label="Descripción *"
+                  value={newExpense.description}
+                  onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
+                  placeholder="ej: Cemento Portland..."
+                  required
+                />
+                <Input
+                  label="Cantidad *"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={newExpense.quantity}
+                  onChange={(e) => setNewExpense({ ...newExpense, quantity: e.target.value })}
+                  placeholder="ej: 10"
+                  required
+                />
+                <Input
+                  label="Precio Unitario (€) *"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={newExpense.unitPrice}
+                  onChange={(e) => setNewExpense({ ...newExpense, unitPrice: e.target.value })}
+                  placeholder="ej: 25.50"
+                  required
+                />
+                <Input
+                  label="Fecha *"
+                  type="date"
+                  value={newExpense.date}
+                  onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
+                  required
+                />
+              </div>
+              <Input
+                label="Notas"
+                value={newExpense.notes}
+                onChange={(e) => setNewExpense({ ...newExpense, notes: e.target.value })}
+                placeholder="Notas adicionales..."
+              />
+              {newExpense.quantity && newExpense.unitPrice && (
+                <div className="text-right text-lg font-bold text-gray-800">
+                  Total: {(parseFloat(newExpense.quantity) * parseFloat(newExpense.unitPrice)).toFixed(2)}€
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="secondary" onClick={() => setShowAddExpense(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit">Agregar Gasto</Button>
+              </div>
+            </form>
+          )}
+
+          {/* Lista de Gastos */}
+          <div className="space-y-2">
+            {expenses.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <div className="text-4xl mb-2">💰</div>
+                <p>No hay gastos registrados. ¡Agrega el primero!</p>
+              </div>
+            ) : (
+              expenses.map((expense) => (
+                <div key={expense.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                  {editingExpenseId === expense.id ? (
+                    <form onSubmit={(e) => handleUpdateExpense(e, expense.id)} className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Gasto *</label>
+                          <select
+                            value={editExpense.type}
+                            onChange={(e) => setEditExpense({ ...editExpense, type: e.target.value as 'MATERIAL' | 'EQUIPMENT' | 'LABOR' })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white text-gray-900"
+                            required
+                          >
+                            <option value="MATERIAL">💎 Materiales</option>
+                            <option value="EQUIPMENT">🔧 Equipos</option>
+                            <option value="LABOR">👷 Mano de Obra</option>
+                          </select>
+                        </div>
+                        <Input
+                          label="Descripción *"
+                          value={editExpense.description}
+                          onChange={(e) => setEditExpense({ ...editExpense, description: e.target.value })}
+                          required
+                        />
+                        <Input
+                          label="Cantidad *"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editExpense.quantity}
+                          onChange={(e) => setEditExpense({ ...editExpense, quantity: e.target.value })}
+                          required
+                        />
+                        <Input
+                          label="Precio Unitario (€) *"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editExpense.unitPrice}
+                          onChange={(e) => setEditExpense({ ...editExpense, unitPrice: e.target.value })}
+                          required
+                        />
+                        <Input
+                          label="Fecha *"
+                          type="date"
+                          value={editExpense.date}
+                          onChange={(e) => setEditExpense({ ...editExpense, date: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <Input
+                        label="Notas"
+                        value={editExpense.notes}
+                        onChange={(e) => setEditExpense({ ...editExpense, notes: e.target.value })}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <Button type="button" variant="secondary" onClick={handleCancelEditExpense}>
+                          Cancelar
+                        </Button>
+                        <Button type="submit">Guardar Cambios</Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-2xl">
+                            {expense.type === 'MATERIAL' && '💎'}
+                            {expense.type === 'EQUIPMENT' && '🔧'}
+                            {expense.type === 'LABOR' && '👷'}
+                          </span>
+                          <h3 className="font-semibold text-gray-800">{expense.description}</h3>
+                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded-full">
+                            {expense.type === 'MATERIAL' && 'Material'}
+                            {expense.type === 'EQUIPMENT' && 'Equipo'}
+                            {expense.type === 'LABOR' && 'Mano de Obra'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <span>📦 Cantidad: {parseFloat(expense.quantity.toString())}</span>
+                          <span>💵 P. Unitario: {parseFloat(expense.unitPrice.toString()).toFixed(2)}€</span>
+                          <span className="font-semibold text-green-600">
+                            💰 Total: {parseFloat(expense.totalPrice.toString()).toFixed(2)}€
+                          </span>
+                          <span>📅 {new Date(expense.date).toLocaleDateString()}</span>
+                        </div>
+                        {expense.notes && (
+                          <p className="text-xs text-gray-500 mt-1">📝 {expense.notes}</p>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleStartEditExpense(expense)}
+                          className="text-blue-500 hover:text-blue-700 p-1"
+                          title="Editar"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleDeleteExpense(expense.id)}
                           className="text-red-500 hover:text-red-700 p-1"
                           title="Eliminar"
                         >

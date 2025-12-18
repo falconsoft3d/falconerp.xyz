@@ -17,6 +17,8 @@ interface Quote {
   status: 'QUOTE' | 'ORDER';
   notes: string | null;
   invoiceId: string | null;
+  publicToken: string | null;
+  clientApprovalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
   contact: {
     id: string;
     name: string;
@@ -30,6 +32,7 @@ export default function QuotesPage() {
   const [activeCompany, setActiveCompany] = useState<any>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
   const [showPublicLink, setShowPublicLink] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -124,6 +127,39 @@ export default function QuotesPage() {
     }
   };
 
+  const handleGeneratePublicLink = async (quoteId: string) => {
+    setGeneratingLink(quoteId);
+    try {
+      const res = await fetch(`/api/quotes/${quoteId}/public-link`, {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        navigator.clipboard.writeText(data.publicUrl);
+        alert('✓ Enlace público copiado al portapapeles');
+        if (activeCompany) {
+          fetchQuotes(activeCompany.id);
+        }
+      } else {
+        const error = await res.json();
+        alert(error.error || 'Error al generar enlace público');
+      }
+    } catch (error) {
+      console.error('Error generating public link:', error);
+      alert('Error al generar enlace público');
+    } finally {
+      setGeneratingLink(null);
+    }
+  };
+
+  const handleCopyPublicLink = async (quote: Quote) => {
+    if (!quote.publicToken) return;
+    const publicUrl = `${window.location.origin}/public/quotes/view/${quote.publicToken}`;
+    navigator.clipboard.writeText(publicUrl);
+    alert('✓ Enlace público copiado al portapapeles');
+  };
+
   const getCurrencySymbol = (currency: string) => {
     const symbols: { [key: string]: string } = {
       EUR: '€',
@@ -138,6 +174,24 @@ export default function QuotesPage() {
       CLP: '$',
     };
     return symbols[currency] || currency;
+  };
+
+  const getApprovalBadge = (approvalStatus: string) => {
+    if (approvalStatus === 'APPROVED') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 ml-1">
+          ✓ Aprobado
+        </span>
+      );
+    }
+    if (approvalStatus === 'REJECTED') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 ml-1">
+          ✗ Rechazado
+        </span>
+      );
+    }
+    return null;
   };
 
   const getStatusBadge = (status: string, hasInvoice: boolean) => {
@@ -229,7 +283,12 @@ export default function QuotesPage() {
     {
       key: 'status',
       label: 'Estado',
-      render: (quote: Quote) => getStatusBadge(quote.status, !!quote.invoiceId),
+      render: (quote: Quote) => (
+        <div className="flex flex-wrap items-center gap-1">
+          {getStatusBadge(quote.status, !!quote.invoiceId)}
+          {getApprovalBadge(quote.clientApprovalStatus)}
+        </div>
+      ),
     },
     {
       key: 'actions',
@@ -242,6 +301,24 @@ export default function QuotesPage() {
           >
             Ver
           </button>
+          {quote.publicToken ? (
+            <button
+              onClick={() => handleCopyPublicLink(quote)}
+              className="text-purple-600 hover:text-purple-800 font-medium text-sm"
+              title="Copiar enlace público"
+            >
+              🔗
+            </button>
+          ) : (
+            <button
+              onClick={() => handleGeneratePublicLink(quote.id)}
+              disabled={generatingLink === quote.id}
+              className="text-purple-600 hover:text-purple-800 font-medium text-sm disabled:opacity-50"
+              title="Generar enlace público"
+            >
+              {generatingLink === quote.id ? '...' : '🔗+'}
+            </button>
+          )}
           {!quote.invoiceId && (
             <button
               onClick={() => handleConvertToInvoice(quote.id)}

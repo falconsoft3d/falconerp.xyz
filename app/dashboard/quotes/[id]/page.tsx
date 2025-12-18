@@ -17,6 +17,7 @@ interface Quote {
   status: 'QUOTE' | 'ORDER';
   notes: string | null;
   invoiceId: string | null;
+  workOrderId: string | null;
   contact: {
     id: string;
     name: string;
@@ -47,6 +48,7 @@ interface Quote {
       id: string;
       name: string;
       code: string;
+      type: string;
     } | null;
     project: {
       id: string;
@@ -65,6 +67,7 @@ export default function QuoteDetailPage() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
   const [converting, setConverting] = useState(false);
+  const [creatingWorkOrder, setCreatingWorkOrder] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -112,6 +115,43 @@ export default function QuoteDetailPage() {
       alert('Error al convertir la cotización');
     } finally {
       setConverting(false);
+    }
+  };
+
+  const handleConvertToWorkOrder = async () => {
+    if (!quote) return;
+    
+    // Contar servicios
+    const serviceCount = quote.items.filter(item => item.product?.type === 'service').length;
+    
+    if (serviceCount === 0) {
+      alert('No hay productos de tipo servicio en esta cotización');
+      return;
+    }
+
+    if (!confirm(`¿Crear orden de trabajo con ${serviceCount} servicio(s)?\n\nNota: Solo se incluirán productos de tipo servicio.`)) {
+      return;
+    }
+
+    setCreatingWorkOrder(true);
+    try {
+      const res = await fetch(`/api/quotes/${params.id}/convert-to-work-order`, {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        const workOrder = await res.json();
+        alert(`✓ Orden de trabajo ${workOrder.number} creada exitosamente`);
+        fetchQuote(); // Recargar para mostrar el enlace
+      } else {
+        const error = await res.json();
+        alert(error.error || 'Error al crear orden de trabajo');
+      }
+    } catch (error) {
+      console.error('Error creating work order:', error);
+      alert('Error al crear orden de trabajo');
+    } finally {
+      setCreatingWorkOrder(false);
     }
   };
 
@@ -250,7 +290,24 @@ export default function QuoteDetailPage() {
               >
                 {converting ? 'Convirtiendo...' : '💰 Facturar'}
               </Button>
+              {!quote.workOrderId && (
+                <Button
+                  onClick={handleConvertToWorkOrder}
+                  disabled={creatingWorkOrder}
+                  variant="secondary"
+                >
+                  {creatingWorkOrder ? 'Creando...' : '🔧 Crear OT'}
+                </Button>
+              )}
             </>
+          )}
+          {quote.workOrderId && (
+            <Button
+              onClick={() => router.push(`/dashboard/work-orders/${quote.workOrderId}`)}
+              variant="secondary"
+            >
+              📋 Ver Orden de Trabajo
+            </Button>
           )}
         </div>
       </div>
@@ -403,19 +460,28 @@ export default function QuoteDetailPage() {
               {quote.items.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <div className="text-sm font-medium text-gray-900">
-                      {item.description}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.description}
+                        </div>
+                        {item.product && (
+                          <div className="text-xs text-gray-500">
+                            {item.product.code} - {item.product.name}
+                          </div>
+                        )}
+                        {item.project && (
+                          <div className="text-xs text-blue-600">
+                            Proyecto: {item.project.name}
+                          </div>
+                        )}
+                      </div>
+                      {item.product?.type === 'service' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                          Servicio
+                        </span>
+                      )}
                     </div>
-                    {item.product && (
-                      <div className="text-xs text-gray-500">
-                        {item.product.code} - {item.product.name}
-                      </div>
-                    )}
-                    {item.project && (
-                      <div className="text-xs text-blue-600">
-                        Proyecto: {item.project.name}
-                      </div>
-                    )}
                   </td>
                   <td className="px-4 py-3 text-right text-sm text-gray-900">
                     {item.quantity}
