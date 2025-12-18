@@ -135,6 +135,24 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
       href: '/dashboard/purchase-invoices',
     },
     {
+      name: 'Asientos Contables',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      ),
+      href: '/dashboard/accounting/entries',
+    },
+    {
+      name: 'Contabilidad',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+      ),
+      href: '/dashboard/accounting',
+    },
+    {
       name: 'Proyectos',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,10 +335,19 @@ function DashboardLayoutContent({ children }: DashboardLayoutProps) {
             }
           `}</style>
           {menuItems.map((item) => {
-            // Solo activo si es exactamente la ruta o si es /dashboard y estamos exactamente en /dashboard
-            const isActive = item.href === '/dashboard' 
-              ? pathname === '/dashboard'
-              : pathname === item.href || pathname?.startsWith(item.href + '/');
+            // Solo activo si es exactamente la ruta o subrutas, excepto para rutas específicas
+            let isActive;
+            if (item.href === '/dashboard') {
+              // Dashboard solo activo en ruta exacta
+              isActive = pathname === '/dashboard';
+            } else if (item.href === '/dashboard/accounting') {
+              // Contabilidad solo activo en /dashboard/accounting/* pero NO en /dashboard/accounting/entries/*
+              isActive = pathname === item.href || 
+                         (pathname?.startsWith(item.href + '/') && !pathname?.startsWith('/dashboard/accounting/entries'));
+            } else {
+              // Otros menús: activo si coincide exactamente o es subruta
+              isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+            }
             return (
               <Link
                 key={item.href}

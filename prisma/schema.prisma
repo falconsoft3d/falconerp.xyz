@@ -57,6 +57,10 @@ model User {
   workOrders WorkOrder[]
   responsibleWorkOrders WorkOrder[] @relation("WorkOrderResponsible")
   properties Property[]
+  journals  Journal[]
+  accounts  Account[]
+  taxes     Tax[]
+  journalEntries JournalEntry[]
 }
 
 model Company {
@@ -134,6 +138,10 @@ model Company {
   trackings Tracking[]
   workOrders WorkOrder[]
   properties Property[]
+  journals  Journal[]
+  accounts  Account[]
+  taxes     Tax[]
+  journalEntries JournalEntry[]
   
   @@index([userId])
   @@index([userId, active])
@@ -1029,4 +1037,120 @@ model PropertyContact {
   
   @@index([propertyId])
   @@index([contactId])
+}
+
+model Journal {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  code        String   // Código del diario (ej: VEN001)
+  name        String   // Nombre del diario (ej: Diario de Ventas)
+  type        String   // Tipo: sale, purchase, bank, cash, general, opening, closing
+  description String?  @db.Text // Descripción opcional
+  
+  active      Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([companyId, code])
+  @@index([userId])
+  @@index([companyId])
+  @@index([type])
+}
+
+model Account {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  code        String   // Código de la cuenta (ej: 1001, 4001)
+  name        String   // Nombre de la cuenta (ej: Caja, Ventas)
+  type        String   // Tipo: asset, liability, equity, income, expense
+  
+  active      Boolean  @default(true)
+  
+  journalEntryLines JournalEntryLine[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([companyId, code])
+  @@index([userId])
+  @@index([companyId])
+  @@index([type])
+}
+
+model Tax {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  code        String   // Código del impuesto (ej: IVA21)
+  name        String   // Nombre del impuesto (ej: IVA 21%)
+  rate        Decimal  @db.Decimal(5, 2) // Tasa del impuesto (ej: 21.00)
+  type        String   // Tipo: vat, retention, other
+  
+  active      Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([companyId, code])
+  @@index([userId])
+  @@index([companyId])
+  @@index([type])
+}
+
+model JournalEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  number      String   // Número del asiento
+  date        DateTime // Fecha del asiento
+  reference   String?  // Referencia opcional
+  description String   @db.Text // Descripción del asiento
+  
+  lines       JournalEntryLine[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([companyId, number])
+  @@index([userId])
+  @@index([companyId])
+  @@index([date])
+}
+
+model JournalEntryLine {
+  id              String        @id @default(cuid())
+  journalEntryId  String
+  journalEntry    JournalEntry  @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  
+  accountId       String
+  account         Account       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  
+  description     String?       @db.Text // Descripción de la línea
+  debit           Decimal       @default(0) @db.Decimal(12, 2) // Debe
+  credit          Decimal       @default(0) @db.Decimal(12, 2) // Haber
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([journalEntryId])
+  @@index([accountId])
 }
