@@ -7,8 +7,8 @@ import { createOdooInvoice } from '@/lib/odoo-invoice';
 
 // Schema de validación para items de factura
 const invoiceItemSchema = z.object({
-  productId: z.string().optional(),
-  projectId: z.string().optional(),
+  productId: z.string().nullish().transform(val => val || null),
+  projectId: z.string().nullish().transform(val => val || null),
   description: z.string().min(1, 'La descripción es requerida'),
   quantity: z.number().min(0.01, 'La cantidad debe ser mayor a 0'),
   price: z.number().min(0, 'El precio debe ser mayor o igual a 0'),
@@ -17,17 +17,17 @@ const invoiceItemSchema = z.object({
 
 // Schema de validación para facturas
 const invoiceSchema = z.object({
-  type: z.enum(['SALE', 'PURCHASE']).default('SALE'),
+  type: z.enum(['invoice_out', 'refund_out', 'invoice_in', 'refund_in']).default('invoice_out'),
   companyId: z.string(),
   contactId: z.string(),
-  supplierReference: z.string().optional().nullable(),
+  supplierReference: z.string().nullish().transform(val => val || null),
   number: z.string().optional(),
   date: z.string().optional(),
-  dueDate: z.string().optional(),
+  dueDate: z.string().nullish(),
   currency: z.string().default('EUR'),
   status: z.enum(['DRAFT', 'VALIDATED']).default('DRAFT'),
   paymentStatus: z.enum(['UNPAID', 'PAID']).default('UNPAID'),
-  notes: z.string().optional().default(''),
+  notes: z.string().nullish().transform(val => val || ''),
   items: z.array(invoiceItemSchema).min(1, 'Debe incluir al menos un item'),
 });
 
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('companyId');
-    const type = searchParams.get('type') as 'SALE' | 'PURCHASE' | null;
+    const type = searchParams.get('type') as 'invoice_out' | 'refund_out' | 'invoice_in' | 'refund_in' | null;
 
     if (!companyId) {
       return NextResponse.json(
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       where: { id: validatedData.contactId },
     });
 
-    const invoiceType = validatedData.type || 'SALE';
+    const invoiceType = validatedData.type || 'invoice_out';
 
     if (!contact) {
       return NextResponse.json(
@@ -129,14 +129,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (invoiceType === 'SALE' && !contact.isCustomer) {
+    if ((invoiceType === 'invoice_out' || invoiceType === 'refund_out') && !contact.isCustomer) {
       return NextResponse.json(
         { error: 'El contacto debe ser un cliente para facturas de venta' },
         { status: 400 }
       );
     }
 
-    if (invoiceType === 'PURCHASE' && !contact.isSupplier) {
+    if ((invoiceType === 'invoice_in' || invoiceType === 'refund_in') && !contact.isSupplier) {
       return NextResponse.json(
         { error: 'El contacto debe ser un proveedor para facturas de compra' },
         { status: 400 }
@@ -154,11 +154,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const prefix = invoiceType === 'SALE' 
+    const prefix = (invoiceType === 'invoice_out' || invoiceType === 'refund_out') 
       ? (company?.salesInvoicePrefix || 'INV')
       : (company?.purchaseInvoicePrefix || 'INVO');
 
-    const nextNumber = invoiceType === 'SALE'
+    const nextNumber = (invoiceType === 'invoice_out' || invoiceType === 'refund_out')
       ? (company?.salesInvoiceNextNumber || 1)
       : (company?.purchaseInvoiceNextNumber || 1);
 
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
             where: { id: item.productId },
             data: {
               stock: {
-                [invoiceType === 'SALE' ? 'decrement' : 'increment']: item.quantity,
+                [(invoiceType === 'invoice_out' || invoiceType === 'refund_out') ? 'decrement' : 'increment']: item.quantity,
               },
             },
           });
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
       await tx.company.update({
         where: { id: validatedData.companyId },
         data: {
-          [invoiceType === 'SALE' ? 'salesInvoiceNextNumber' : 'purchaseInvoiceNextNumber']: {
+          [(invoiceType === 'invoice_out' || invoiceType === 'refund_out') ? 'salesInvoiceNextNumber' : 'purchaseInvoiceNextNumber']: {
             increment: 1,
           },
         },
@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Crear factura en Odoo si está habilitado y es una venta
-    if (invoiceType === 'SALE') {
+    if (invoiceType === 'invoice_out' || invoiceType === 'refund_out') {
       try {
         // TODO: Descomentar después de ejecutar la migración para odooCreateInvoiceOnSale
         /* 

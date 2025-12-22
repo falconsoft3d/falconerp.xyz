@@ -29,6 +29,7 @@ interface Property {
   block: string | null;
   number: string | null;
   projectId: string | null;
+  responsableId: string | null;
   constructionDate: Date | null;
   contractAmount: number | null;
   contractStartDate: Date | null;
@@ -56,6 +57,7 @@ export default function PropertyDetailPage() {
     block: '',
     number: '',
     projectId: '',
+    responsableId: '',
     constructionDate: '',
     contractAmount: '',
     contractStartDate: '',
@@ -114,6 +116,7 @@ export default function PropertyDetailPage() {
           block: data.block || '',
           number: data.number || '',
           projectId: data.projectId || '',
+          responsableId: data.responsableId || '',
           constructionDate: data.constructionDate ? new Date(data.constructionDate).toISOString().split('T')[0] : '',
           contractAmount: data.contractAmount?.toString() || '',
           contractStartDate: data.contractStartDate ? new Date(data.contractStartDate).toISOString().split('T')[0] : '',
@@ -173,6 +176,7 @@ export default function PropertyDetailPage() {
           block: formData.block || null,
           number: formData.number || null,
           projectId: formData.projectId || null,
+          responsableId: formData.responsableId || null,
           constructionDate: formData.constructionDate || null,
           contractAmount: formData.contractAmount ? parseFloat(formData.contractAmount) : null,
           contractStartDate: formData.contractStartDate || null,
@@ -281,7 +285,7 @@ export default function PropertyDetailPage() {
   if (loading) {
     return (
       <div className="p-8">
-        <div className="text-center text-black">Cargando propiedad...</div>
+        <div className="text-center">Cargando propiedad...</div>
       </div>
     );
   }
@@ -341,6 +345,24 @@ export default function PropertyDetailPage() {
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Responsable
+            </label>
+            <select
+              value={formData.responsableId}
+              onChange={(e) => setFormData({ ...formData, responsableId: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-black"
+            >
+              <option value="">Sin responsable</option>
+              {contacts.map((contact) => (
+                <option key={contact.id} value={contact.id}>
+                  {contact.name}
                 </option>
               ))}
             </select>
@@ -484,9 +506,9 @@ export default function PropertyDetailPage() {
 
           {propertyContacts.length > 0 && (
             <div className="bg-gray-50 rounded-lg p-4">
-              <table className="w-full">
+              <table className="w-full text-black">
                 <thead>
-                  <tr className="border-b text-black">
+                  <tr className="border-b">
                     <th className="text-left py-2">Contacto</th>
                     <th className="text-left py-2">Email</th>
                     <th className="text-left py-2">Responsabilidad</th>
@@ -495,7 +517,7 @@ export default function PropertyDetailPage() {
                 </thead>
                 <tbody>
                   {propertyContacts.map((pc) => (
-                    <tr key={pc.id} className="border-b last:border-0 text-black">
+                    <tr key={pc.id} className="border-b last:border-0">
                       <td className="py-2">{pc.contact.name}</td>
                       <td className="py-2 text-sm text-gray-600">{pc.contact.email || '-'}</td>
                       <td className="py-2">{pc.responsibility}</td>

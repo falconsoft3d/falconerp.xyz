@@ -205,6 +205,7 @@ model Contact {
   equipment   Equipment[]
   propertyContacts PropertyContact[]
   payments    Payment[]
+  responsibleProperties Property[] @relation("PropertyResponsible")
   
   @@index([userId])
   @@index([companyId])
@@ -268,7 +269,7 @@ model Invoice {
   contact       Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
   
   // Tipo de factura
-  type          InvoiceType @default(SALE) // Venta o Compra
+  type          InvoiceType @default(invoice_out) // invoice_out, refund_out, invoice_in, refund_in
   
   // Número de factura
   number        String    // Número de factura (ej: INV-2024-001)
@@ -316,8 +317,10 @@ model Invoice {
 }
 
 enum InvoiceType {
-  SALE        // Factura de venta
-  PURCHASE    // Factura de compra
+  invoice_out  // Factura de venta (antes SALE)
+  refund_out   // Nota de crédito de venta (devolución de cliente)
+  invoice_in   // Factura de compra (antes PURCHASE)
+  refund_in    // Nota de crédito de compra (devolución a proveedor)
 }
 
 enum InvoiceStatus {
@@ -1083,6 +1086,9 @@ model Property {
   projectId             String?
   project               Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   
+  responsableId         String?
+  responsable           Contact? @relation("PropertyResponsible", fields: [responsableId], references: [id], onDelete: SetNull)
+  
   constructionDate      DateTime? // Fecha de construcción
   contractAmount        Decimal?  @db.Decimal(15, 2) // Importe de contrato
   contractStartDate     DateTime? // Fecha de inicio de contrato
@@ -1101,6 +1107,7 @@ model Property {
   @@index([userId])
   @@index([companyId])
   @@index([projectId])
+  @@index([responsableId])
 }
 
 model PropertyContact {

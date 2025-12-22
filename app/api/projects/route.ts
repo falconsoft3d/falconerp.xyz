@@ -67,7 +67,10 @@ export async function GET(request: NextRequest) {
           orderBy: { order: 'asc' },
         },
         _count: {
-          select: { tasks: true },
+          select: { 
+            tasks: true,
+            properties: true,
+          },
         },
       },
       orderBy: { createdAt: 'desc' },

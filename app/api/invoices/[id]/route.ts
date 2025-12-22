@@ -6,7 +6,8 @@ import { getEffectiveUserId } from '@/lib/user-helpers';
 
 // Schema de validación para items de factura
 const invoiceItemSchema = z.object({
-  productId: z.string().optional(),
+  productId: z.string().nullish().transform(val => val || null),
+  projectId: z.string().nullish().transform(val => val || null),
   description: z.string().min(1, 'La descripción es requerida'),
   quantity: z.number().min(0.01, 'La cantidad debe ser mayor a 0'),
   price: z.number().min(0, 'El precio debe ser mayor o igual a 0'),
@@ -18,11 +19,11 @@ const updateInvoiceSchema = z.object({
   number: z.string().optional(),
   contactId: z.string().optional(),
   date: z.string().optional(),
-  dueDate: z.string().optional(),
+  dueDate: z.string().nullish(),
   currency: z.string().optional(),
   status: z.enum(['DRAFT', 'VALIDATED']).optional(),
   paymentStatus: z.enum(['UNPAID', 'PAID']).optional(),
-  notes: z.string().optional(),
+  notes: z.string().nullish(),
   items: z.array(invoiceItemSchema).optional(),
 });
 
@@ -53,6 +54,12 @@ export async function GET(
               select: {
                 name: true,
                 code: true,
+              },
+            },
+            project: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
@@ -91,7 +98,16 @@ export async function PUT(
     const effectiveUserId = await getEffectiveUserId(payload.userId);
 
     const body = await request.json();
-    const validatedData = updateInvoiceSchema.parse(body);
+    
+    const validationResult = updateInvoiceSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: 'Datos inválidos', details: validationResult.error.errors },
+        { status: 400 }
+      );
+    }
+    
+    const validatedData = validationResult.data;
 
     // Verificar que la factura existe y pertenece al usuario
     const existingInvoice = await prisma.invoice.findFirst({

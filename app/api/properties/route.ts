@@ -11,6 +11,7 @@ const propertySchema = z.object({
   block: z.string().optional().nullable(),
   number: z.string().optional().nullable(),
   projectId: z.string().optional().nullable(),
+  responsableId: z.string().optional().nullable(),
   constructionDate: z.string().optional().nullable(),
   contractAmount: z.number().optional().nullable(),
   contractStartDate: z.string().optional().nullable(),
@@ -53,6 +54,14 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
+          },
+        },
+        responsable: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
           },
         },
         contacts: {
@@ -120,6 +129,7 @@ export async function POST(request: NextRequest) {
         block: validatedData.block || null,
         number: validatedData.number || null,
         projectId: validatedData.projectId || null,
+        responsableId: validatedData.responsableId || null,
         constructionDate: validatedData.constructionDate ? new Date(validatedData.constructionDate) : null,
         contractAmount: validatedData.contractAmount || null,
         contractStartDate: validatedData.contractStartDate ? new Date(validatedData.contractStartDate) : null,
@@ -137,6 +147,14 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             name: true,
+          },
+        },
+        responsable: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
           },
         },
         contacts: {

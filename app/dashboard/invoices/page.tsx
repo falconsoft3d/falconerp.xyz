@@ -54,7 +54,7 @@ export default function InvoicesPage() {
 
   const fetchInvoices = async (companyId: string) => {
     try {
-      const res = await fetch(`/api/invoices?companyId=${companyId}`);
+      const res = await fetch(`/api/invoices?companyId=${companyId}&type=invoice_out`);
       if (res.ok) {
         const data = await res.json();
         setInvoices(data);

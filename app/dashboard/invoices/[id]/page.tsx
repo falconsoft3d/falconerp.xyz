@@ -23,6 +23,7 @@ interface Product {
 
 interface InvoiceItem {
   productId?: string;
+  projectId?: string;
   description: string;
   quantity: number;
   price: number;
@@ -66,6 +67,7 @@ interface Invoice {
   items: Array<{
     id: string;
     productId: string | null;
+    projectId: string | null;
     description: string;
     quantity: number;
     price: number;
@@ -84,6 +86,7 @@ export default function EditInvoicePage() {
   const [activeCompany, setActiveCompany] = useState<any>(null);
   const [clients, setClients] = useState<Contact[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [projects, setProjects] = useState<{id: string; name: string}[]>([]);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
 
   const getDefaultDueDate = () => {
@@ -107,6 +110,7 @@ export default function EditInvoicePage() {
   const [items, setItems] = useState<InvoiceItem[]>([
     {
       productId: '',
+      projectId: '',
       description: '',
       quantity: 1,
       price: 0,
@@ -137,6 +141,7 @@ export default function EditInvoicePage() {
       Promise.all([
         fetchClients(activeCompany.id),
         fetchProducts(activeCompany.id),
+        fetchProjects(activeCompany.id),
         fetchInvoice(),
         fetchAttachments(),
         fetchComments(),
@@ -189,6 +194,18 @@ export default function EditInvoicePage() {
     }
   };
 
+  const fetchProjects = async (companyId: string) => {
+    try {
+      const res = await fetch(`/api/projects?companyId=${companyId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setProjects(data);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    }
+  };
+
   const fetchInvoice = async () => {
     try {
       const res = await fetch(`/api/invoices/${invoiceId}`);
@@ -220,6 +237,7 @@ export default function EditInvoicePage() {
 
             return {
               productId: item.productId || '',
+              projectId: item.projectId || '',
               description: item.description,
               quantity,
               price,
@@ -371,6 +389,7 @@ export default function EditInvoicePage() {
 
     return {
       productId: item.productId,
+      projectId: item.projectId,
       description: item.description || '',
       quantity,
       price,
@@ -408,6 +427,7 @@ export default function EditInvoicePage() {
       ...items,
       {
         productId: '',
+        projectId: '',
         description: '',
         quantity: 1,
         price: 0,
@@ -467,26 +487,29 @@ export default function EditInvoicePage() {
     }
 
     try {
+      const payload = {
+        number: formData.number,
+        contactId: formData.contactId,
+        date: formData.date,
+        dueDate: formData.dueDate || null,
+        currency: formData.currency,
+        status: formData.status,
+        paymentStatus: formData.paymentStatus,
+        notes: formData.notes,
+        items: items.map(item => ({
+          productId: item.productId && item.productId !== '' ? item.productId : null,
+          projectId: item.projectId && item.projectId !== '' ? item.projectId : null,
+          description: item.description,
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+          tax: Number(item.tax),
+        })),
+      };
+      
       const res = await fetch(`/api/invoices/${invoiceId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          number: formData.number,
-          contactId: formData.contactId,
-          date: formData.date,
-          dueDate: formData.dueDate || null,
-          currency: formData.currency,
-          status: formData.status,
-          paymentStatus: formData.paymentStatus,
-          notes: formData.notes,
-          items: items.map(item => ({
-            productId: item.productId || undefined,
-            description: item.description,
-            quantity: item.quantity,
-            price: item.price,
-            tax: item.tax,
-          })),
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -734,6 +757,7 @@ export default function EditInvoicePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          type: 'invoice_out',
           companyId: activeCompany.id,
           contactId: formData.contactId,
           date: new Date().toISOString().split('T')[0],
@@ -743,7 +767,8 @@ export default function EditInvoicePage() {
           paymentStatus: 'UNPAID',
           notes: formData.notes,
           items: items.map(item => ({
-            productId: item.productId || null,
+            productId: item.productId && item.productId !== '' ? item.productId : null,
+            projectId: item.projectId && item.projectId !== '' ? item.projectId : null,
             description: item.description,
             quantity: item.quantity,
             price: item.price,
@@ -1018,7 +1043,7 @@ export default function EditInvoicePage() {
           <div className="space-y-4">
             {items.map((item, index) => (
               <div key={index} className="border border-gray-200 rounded-lg p-4">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-14 gap-4">
                   <div className="md:col-span-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Producto
@@ -1033,6 +1058,25 @@ export default function EditInvoicePage() {
                       {products.map((product) => (
                         <option key={product.id} value={product.id}>
                           {product.code} - {product.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Proyecto
+                    </label>
+                    <select
+                      value={item.projectId || ''}
+                      onChange={(e) => handleItemChange(index, 'projectId', e.target.value)}
+                      disabled={isValidated}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-teal-500 bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Sin proyecto</option>
+                      {projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
                         </option>
                       ))}
                     </select>

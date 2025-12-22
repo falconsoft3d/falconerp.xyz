@@ -11,6 +11,7 @@ interface Property {
   block: string | null;
   number: string | null;
   projectId: string | null;
+  responsableId: string | null;
   constructionDate: Date | null;
   contractAmount: number | null;
   contractStartDate: Date | null;
@@ -19,6 +20,12 @@ interface Property {
   project: {
     id: string;
     name: string;
+  } | null;
+  responsable: {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
   } | null;
   contacts: Array<{
     id: string;
@@ -225,6 +232,9 @@ export default function PropertiesPage() {
                     Proyecto
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Responsable
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Importe Contrato
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -258,6 +268,11 @@ export default function PropertiesPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
                         {property.project?.name || '-'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {property.responsable?.name || '-'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

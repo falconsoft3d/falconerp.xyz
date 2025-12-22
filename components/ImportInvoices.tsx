@@ -12,7 +12,7 @@ interface ImportInvoicesProps {
 export default function ImportInvoices({ companyId }: ImportInvoicesProps) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
-  const [type, setType] = useState<'SALE' | 'PURCHASE'>('SALE');
+  const [type, setType] = useState<'invoice_out' | 'invoice_in'>('invoice_out');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -84,9 +84,9 @@ export default function ImportInvoices({ companyId }: ImportInvoicesProps) {
                 <input
                   type="radio"
                   name="type"
-                  value="SALE"
-                  checked={type === 'SALE'}
-                  onChange={(e) => setType(e.target.value as 'SALE')}
+                  value="invoice_out"
+                  checked={type === 'invoice_out'}
+                  onChange={(e) => setType(e.target.value as 'invoice_out')}
                   className="mr-2"
                 />
                 <span className="text-sm text-gray-900 font-medium">Venta</span>
@@ -95,9 +95,9 @@ export default function ImportInvoices({ companyId }: ImportInvoicesProps) {
                 <input
                   type="radio"
                   name="type"
-                  value="PURCHASE"
-                  checked={type === 'PURCHASE'}
-                  onChange={(e) => setType(e.target.value as 'PURCHASE')}
+                  value="invoice_in"
+                  checked={type === 'invoice_in'}
+                  onChange={(e) => setType(e.target.value as 'invoice_in')}
                   className="mr-2"
                 />
                 <span className="text-sm text-gray-900 font-medium">Compra</span>

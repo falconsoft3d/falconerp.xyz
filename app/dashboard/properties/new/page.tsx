@@ -36,6 +36,7 @@ export default function NewPropertyPage() {
     block: '',
     number: '',
     projectId: '',
+    responsableId: '',
     constructionDate: '',
     contractAmount: '',
     contractStartDate: '',
@@ -126,6 +127,7 @@ export default function NewPropertyPage() {
           block: formData.block || null,
           number: formData.number || null,
           projectId: formData.projectId || null,
+          responsableId: formData.responsableId || null,
           constructionDate: formData.constructionDate || null,
           contractAmount: formData.contractAmount ? parseFloat(formData.contractAmount) : null,
           contractStartDate: formData.contractStartDate || null,
@@ -229,6 +231,24 @@ export default function NewPropertyPage() {
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Responsable
+            </label>
+            <select
+              value={formData.responsableId}
+              onChange={(e) => setFormData({ ...formData, responsableId: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-black"
+            >
+              <option value="">Sin responsable</option>
+              {contacts.map((contact) => (
+                <option key={contact.id} value={contact.id}>
+                  {contact.name}
                 </option>
               ))}
             </select>

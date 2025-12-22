@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
+import toast from 'react-hot-toast';
 
 interface Contact {
   id: string;
@@ -160,6 +161,7 @@ export default function NewInvoicePage() {
 
     return {
       productId: item.productId,
+      projectId: item.projectId,
       description: item.description || '',
       quantity,
       price,
@@ -261,16 +263,18 @@ export default function NewInvoicePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          type: 'invoice_out',
           companyId: activeCompany.id,
           contactId: formData.contactId,
           date: formData.date,
           dueDate: formData.dueDate || null,
           currency: formData.currency,
           status: formData.status,
-          notes: formData.notes,
+          paymentStatus: formData.paymentStatus || 'UNPAID',
+          notes: formData.notes || '',
           items: items.map(item => ({
-            productId: item.productId || undefined,
-            projectId: item.projectId || undefined,
+            productId: item.productId && item.productId !== '' ? item.productId : null,
+            projectId: item.projectId && item.projectId !== '' ? item.projectId : null,
             description: item.description,
             quantity: item.quantity,
             price: item.price,
@@ -281,7 +285,7 @@ export default function NewInvoicePage() {
 
       if (res.ok) {
         const invoice = await res.json();
-        alert('Factura creada exitosamente');
+        toast.success('Factura de venta creada exitosamente');
         router.push(`/dashboard/invoices`);
       } else {
         const data = await res.json();
@@ -468,6 +472,19 @@ export default function NewInvoicePage() {
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Descripción *
+                    </label>
+                    <input
+                      type="text"
+                      value={item.description}
+                      onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                      required
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-teal-500 bg-white text-gray-900"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Proyecto
                     </label>
                     <select
@@ -482,19 +499,6 @@ export default function NewInvoicePage() {
                         </option>
                       ))}
                     </select>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Descripción *
-                    </label>
-                    <input
-                      type="text"
-                      value={item.description}
-                      onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                      required
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-teal-500 bg-white text-gray-900"
-                    />
                   </div>
 
                   <div className="md:col-span-1">

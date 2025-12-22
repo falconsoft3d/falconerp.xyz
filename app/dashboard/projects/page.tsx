@@ -33,6 +33,7 @@ interface Project {
   tasks: Task[];
   _count: {
     tasks: number;
+    properties: number;
   };
   createdAt: string;
 }
@@ -254,7 +255,7 @@ export default function ProjectsPage() {
                   {(() => {
                     const stats = getProjectStats(project.id);
                     return (
-                      <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                      <div className="grid grid-cols-3 gap-3 pt-2 border-t">
                         <div className="bg-blue-50 p-3 rounded-lg">
                           <div className="text-xs text-blue-600 font-medium mb-1">⏱️ Horas</div>
                           <div className="text-lg font-bold text-blue-900">{stats.hours.toFixed(1)}h</div>
@@ -262,6 +263,16 @@ export default function ProjectsPage() {
                         <div className="bg-teal-50 p-3 rounded-lg">
                           <div className="text-xs text-teal-600 font-medium mb-1">💰 Coste</div>
                           <div className="text-lg font-bold text-teal-900">{stats.cost.toFixed(0)} €</div>
+                        </div>
+                        <div 
+                          className="bg-purple-50 p-3 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/dashboard/properties?projectId=${project.id}`);
+                          }}
+                        >
+                          <div className="text-xs text-purple-600 font-medium mb-1">🏢 Propiedades</div>
+                          <div className="text-lg font-bold text-purple-900">{project._count.properties || 0}</div>
                         </div>
                       </div>
                     );

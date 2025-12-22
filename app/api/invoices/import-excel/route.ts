@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const companyId = formData.get('companyId') as string;
-    const type = formData.get('type') as 'SALE' | 'PURCHASE';
+    const type = formData.get('type') as 'invoice_out' | 'refund_out' | 'invoice_in' | 'refund_in';
 
     if (!file) {
       return NextResponse.json({ error: 'No se proporcionó archivo' }, { status: 400 });
@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
               userId: effectiveUserId,
               companyId,
               name: row.cliente,
-              isCustomer: type === 'SALE',
-              isSupplier: type === 'PURCHASE',
+              isCustomer: type === 'invoice_out' || type === 'refund_out',
+              isSupplier: type === 'invoice_in' || type === 'refund_in',
             },
           });
         }

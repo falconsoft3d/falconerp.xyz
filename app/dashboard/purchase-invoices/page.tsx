@@ -52,7 +52,7 @@ export default function PurchaseInvoicesPage() {
 
   const fetchInvoices = async (companyId: string) => {
     try {
-      const res = await fetch(`/api/invoices?companyId=${companyId}&type=PURCHASE`);
+      const res = await fetch(`/api/invoices?companyId=${companyId}&type=invoice_in`);
       if (res.ok) {
         const data = await res.json();
         setInvoices(data);

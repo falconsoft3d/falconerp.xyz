@@ -10,6 +10,7 @@ const updatePropertySchema = z.object({
   block: z.string().optional().nullable(),
   number: z.string().optional().nullable(),
   projectId: z.string().optional().nullable(),
+  responsableId: z.string().optional().nullable(),
   constructionDate: z.string().optional().nullable(),
   contractAmount: z.number().optional().nullable(),
   contractStartDate: z.string().optional().nullable(),
@@ -45,6 +46,14 @@ export async function GET(
           select: {
             id: true,
             name: true,
+          },
+        },
+        responsable: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
           },
         },
         contacts: {
@@ -138,6 +147,7 @@ export async function PUT(
     if (validatedData.block !== undefined) updateData.block = validatedData.block;
     if (validatedData.number !== undefined) updateData.number = validatedData.number;
     if (validatedData.projectId !== undefined) updateData.projectId = validatedData.projectId;
+    if (validatedData.responsableId !== undefined) updateData.responsableId = validatedData.responsableId;
     if (validatedData.constructionDate !== undefined) {
       updateData.constructionDate = validatedData.constructionDate ? new Date(validatedData.constructionDate) : null;
     }
@@ -174,6 +184,14 @@ export async function PUT(
           select: {
             id: true,
             name: true,
+          },
+        },
+        responsable: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
           },
         },
         contacts: {

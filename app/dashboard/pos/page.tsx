@@ -254,7 +254,7 @@ export default function POSPage() {
       const { subtotal, taxAmount, total } = calculateTotals();
 
       const invoiceData = {
-        type: 'SALE',
+        type: 'invoice_out',
         companyId,
         contactId: selectedContact,
         date: new Date().toISOString(),

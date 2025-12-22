@@ -23,6 +23,7 @@ interface Product {
 
 interface InvoiceItem {
   productId?: string;
+  projectId?: string;
   description: string;
   quantity: number;
   price: number;
@@ -67,6 +68,7 @@ interface Invoice {
   items: Array<{
     id: string;
     productId: string | null;
+    projectId: string | null;
     description: string;
     quantity: number;
     price: number;
@@ -85,6 +87,7 @@ export default function EditPurchaseInvoicePage() {
   const [activeCompany, setActiveCompany] = useState<any>(null);
   const [suppliers, setSuppliers] = useState<Contact[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [projects, setProjects] = useState<{id: string; name: string}[]>([]);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
 
   const getDefaultDueDate = () => {
@@ -109,6 +112,7 @@ export default function EditPurchaseInvoicePage() {
   const [items, setItems] = useState<InvoiceItem[]>([
     {
       productId: '',
+      projectId: '',
       description: '',
       quantity: 1,
       price: 0,
@@ -131,6 +135,7 @@ export default function EditPurchaseInvoicePage() {
       Promise.all([
         fetchSuppliers(activeCompany.id),
         fetchProducts(activeCompany.id),
+        fetchProjects(activeCompany.id),
         fetchInvoice(),
       ]);
     }
@@ -175,6 +180,18 @@ export default function EditPurchaseInvoicePage() {
     }
   };
 
+  const fetchProjects = async (companyId: string) => {
+    try {
+      const res = await fetch(`/api/projects?companyId=${companyId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setProjects(data);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    }
+  };
+
   const fetchInvoice = async () => {
     try {
       setLoading(true);
@@ -202,6 +219,7 @@ export default function EditPurchaseInvoicePage() {
       if (data.items && data.items.length > 0) {
         const loadedItems = data.items.map((item: any) => ({
           productId: item.productId || '',
+          projectId: item.projectId || '',
           description: item.description || '',
           quantity: item.quantity || 1,
           price: item.price || 0,
@@ -250,6 +268,7 @@ export default function EditPurchaseInvoicePage() {
       ...items,
       {
         productId: '',
+        projectId: '',
         description: '',
         quantity: 1,
         price: 0,
@@ -301,7 +320,7 @@ export default function EditPurchaseInvoicePage() {
       const payload = {
         companyId: activeCompany.id,
         contactId: formData.contactId,
-        type: 'PURCHASE',
+        type: 'invoice_in',
         number: formData.number,
         supplierReference: formData.supplierReference,
         date: formData.date,
@@ -315,6 +334,7 @@ export default function EditPurchaseInvoicePage() {
         total: totals.total,
         items: items.filter(item => item.description).map(item => ({
           productId: item.productId || null,
+          projectId: item.projectId && item.projectId !== '' ? item.projectId : null,
           description: item.description,
           quantity: item.quantity,
           price: item.price,
@@ -378,7 +398,7 @@ export default function EditPurchaseInvoicePage() {
       const payload = {
         companyId: activeCompany.id,
         contactId: formData.contactId,
-        type: 'PURCHASE',
+        type: 'invoice_in',
         supplierReference: formData.supplierReference,
         date: new Date().toISOString().split('T')[0],
         dueDate: getDefaultDueDate(),
@@ -391,6 +411,7 @@ export default function EditPurchaseInvoicePage() {
         total: totals.total,
         items: items.filter(item => item.description).map(item => ({
           productId: item.productId || null,
+          projectId: item.projectId && item.projectId !== '' ? item.projectId : null,
           description: item.description,
           quantity: item.quantity,
           price: item.price,
@@ -633,6 +654,7 @@ export default function EditPurchaseInvoicePage() {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left py-2 px-2 text-sm font-semibold text-gray-700">Producto</th>
+                        <th className="text-left py-2 px-2 text-sm font-semibold text-gray-700">Proyecto</th>
                         <th className="text-left py-2 px-2 text-sm font-semibold text-gray-700">Descripción</th>
                         <th className="text-right py-2 px-2 text-sm font-semibold text-gray-700">Cant.</th>
                         <th className="text-right py-2 px-2 text-sm font-semibold text-gray-700">Precio</th>
@@ -655,6 +677,21 @@ export default function EditPurchaseInvoicePage() {
                               {products.map((product) => (
                                 <option key={product.id} value={product.id}>
                                   {product.code} - {product.name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="py-2 px-2">
+                            <select
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              value={item.projectId || ''}
+                              onChange={(e) => handleItemChange(index, 'projectId', e.target.value)}
+                              disabled={isValidated}
+                            >
+                              <option value="">Sin proyecto</option>
+                              {projects.map((project) => (
+                                <option key={project.id} value={project.id}>
+                                  {project.name}
                                 </option>
                               ))}
                             </select>
